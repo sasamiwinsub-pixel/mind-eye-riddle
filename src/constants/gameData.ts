@@ -8,7 +8,7 @@ export interface StepData {
   puzzleAnswer: string; // 前半のテキスト入力正解
   searchTarget: {
     location: string; // A~L
-    position: string; // 上, 下, 左, 右, 中
+    position: string; // 上, 下, 左, 右, 中,それ自身
     item: string; // アイテム名
   };
   unlockedPhotos: string[]; // このステップで新規解放されるフィールド写真
@@ -36,14 +36,14 @@ export const GAME_STEPS: StepData[] = [
     id: 0,
     title: 'チュートリアル-提出場所：「あ」',
     puzzleImage: '/images/step0.png',
-    themeText: '鍵',
+    themeText: 'カギ（写真Aの金庫の中にあるので、回答してみてください）',
     puzzleAnswer: 'れでぃ',
     searchTarget: { location: 'A', position: '中', item: '金庫' },
     unlockedPhotos: ['A'],
     unlockedLocationItems: {
       A: ['灰皿', '金庫', 'ティーパック', '湯呑']
     },
-    memos: ['ルール1：相棒はアイテムに干渉できず、通信と写真連携しかできない','ルール2：謎の画像内に登場したイラストしか視認できない'],
+    memos: ['ルール1：相棒はアイテムに干渉できず、通信と写真連携しかできない'],
   },
   {
     id: 1,
@@ -54,29 +54,29 @@ export const GAME_STEPS: StepData[] = [
     searchTarget: { location: 'C', position: '中', item: '時計' },
     unlockedPhotos: ['B','C'],
     unlockedLocationItems: {
-      B: ['ライオンの銅像'],
+      B: ['ライオンの銅像','時計'],
       C: ['時計']
     },
     partnerEvents: [
-      { targetPhoto: 'B', message: '可視化されて分かったが、どうやら僕はこのライオンに姿を変えられてしまったらしい。そりゃ動けないわけだ。' },
-      { targetPhoto: 'C', message: 'この穴の大きさに４本ぐらい、丁度あのサイズじゃないか？' }
+      { targetPhoto: 'B', message: '可視化されて分かったが、どうやら僕はこのライオンの銅像に姿を変えられてしまったらしい。そりゃ動けないわけだ。' },
+      { targetPhoto: 'C', message: 'この穴の大きさに４本ぐらい、最も一般的なサイズじゃないか？' }
     ],
   },
   {
     id: 1-5,
     title: '提出場所：「う」',
     puzzleImage: '/images/step1-5.png',
-    themeText: 'チュートリアル2なので無し',
+    themeText: '足が偶数本あるもの',
     puzzleAnswer: 'かけじく',
     showBlueAnswerEffect: true,
-    searchTarget: { location: 'C', position: '下', item: 'いぬ' },
+    searchTarget: { location: 'B', position: 'それ自身', item: 'ライオンの銅像' },
     unlockedPhotos: ['I'],
     updatedPhotosAtTheme: {'A': 'A2'}, // ステップ1-5のお題が出たタイミングで、写真AをA3に差し替える
     unlockedLocationItems: {
       'I': ['ラケット'],
       'A': ['掛け軸']
     },
-    memos: ['ルール3：青くなった謎の回答は、イラストに出ていなくても可視化される'],
+    memos: ['ルール２：相棒はライオンの銅像に姿が変わっている','ルール3：青くなった謎の回答は、イラストに出ていなくても可視化される'],
 
   },
   {
@@ -87,7 +87,8 @@ export const GAME_STEPS: StepData[] = [
     puzzleAnswer: 'ぱっく',
     showBlueAnswerEffect: true,
     searchTarget: { location: 'D', position: '中', item: '卵' },
-    unlockedPhotos: ['D','E','F'],
+    unlockedPhotos: [],
+    unlockedPhotosAtTheme: ['D','E','F'],
     unlockedLocationItems: {
       D: ['紙パック'],
       E: ['個包装のパック'],
@@ -197,7 +198,7 @@ export const GAME_STEPS: StepData[] = [
     id: 7,
     title: 'Step 7: 「き」',
     puzzleImage: '/images/step7.png',
-    themeText: '足が偶数本あるもの',
+    themeText: '蜘蛛',
     puzzleAnswer: '7',
     searchTarget: { location: 'J', position: '下', item: 'きつね' },
     unlockedPhotos: ['K'],
@@ -220,4 +221,4 @@ export const GAME_STEPS: StepData[] = [
 ];
 
 export const LOCATIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
-export const POSITIONS = ['上', '下', '左', '右', '中'];
+export const POSITIONS = ['中','上', '下', '左', '右', 'それ自身'];

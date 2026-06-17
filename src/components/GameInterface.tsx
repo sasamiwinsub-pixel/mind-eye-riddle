@@ -1,11 +1,34 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { GAME_STEPS, LOCATIONS, POSITIONS } from '@/constants/gameData';
 
 type Tab = 'main' | 'map' | 'photos' | 'log';
-type DialogMessage = 'tutorial_photos' | 'start_puzzle' | 'tutorial_search' | null;
+type DialogMessage = 'tutorial_photos' | 'start_puzzle' | 'tutorial_search' | 'new_memo_unlocked' | null;
+type CutInSpeaker = '相棒' | '自分' | 'ゲームマスター';
+type CutInLine = {
+  speaker: CutInSpeaker;
+  text: string;
+};
+
+const CUT_IN_LINES = {
+  tutorialStart: [
+    { speaker: '相棒', text: '立山君、聞こえる？' },
+    { speaker: '自分', text: '相棒！！' },
+    { speaker: '相棒', text: '今は何もない真っ白の空間なんだけど、これからゲーム開始みたいだね' },
+    { speaker: 'ゲームマスター', text: 'ただいまよりゲームのチュートリアルを開始します。まずはこの謎を解いてください' },
+  ],
+  tutorialPuzzleSolved: [
+    { speaker: '相棒', text: '僕が幽体離脱で見に行くと、自動でそっちに写真が送られるみたいだ。逐一送るようにするよ' },
+  ],
+  stepOnePuzzleStart: [
+    { speaker: '相棒', text: 'まずは謎からだね' },
+  ],
+  stepOnePuzzleSolved: [
+    { speaker: '相棒', text: '次は提出写真を確認して、見えないものを想像しよう' },
+  ],
+} satisfies Record<string, CutInLine[]>;
 
 export default function GameInterface() {
   const [currentStepId, setCurrentStepId] = useState(0);
@@ -19,6 +42,11 @@ export default function GameInterface() {
   const [searchItem, setSearchItem] = useState('');
 
   const [errorMsg, setErrorMsg] = useState('');
+  const [showRulesInfo, setShowRulesInfo] = useState(false);
+  const [isRulesInfoUnlocked, setIsRulesInfoUnlocked] = useState(false);
+  const [showRulesInfoPrompt, setShowRulesInfoPrompt] = useState(false);
+  const [tabGuideStep, setTabGuideStep] = useState<'photos' | 'photoA' | 'map' | null>(null);
+  const [hasStartedTabGuide, setHasStartedTabGuide] = useState(false);
 
   // 青ハイライト演出用：正解後にお題へ進むボタンを表示する状態
   const [isPuzzleSolvedPending, setIsPuzzleSolvedPending] = useState(false);
@@ -46,36 +74,36 @@ export default function GameInterface() {
 
   // ダイアログ状態
   const [tutorialDialog, setTutorialDialog] = useState<DialogMessage>(null);
-  const [showedPhotosDialog, setShowedPhotosDialog] = useState(false);
-  const [showedPuzzleDialog, setShowedPuzzleDialog] = useState(false);
+  const [cutInLines, setCutInLines] = useState<CutInLine[]>(CUT_IN_LINES.tutorialStart);
+  const [cutInIndex, setCutInIndex] = useState(0);
   const [showedSearchTutorialDialog, setShowedSearchTutorialDialog] = useState(false);
-  const [showPuzzleDialogAfterZoom, setShowPuzzleDialogAfterZoom] = useState(false);
 
   // 相棒クイズ解答状態
   const [solvedPartnerQuestions, setSolvedPartnerQuestions] = useState<string[]>([]);
   const [partnerAnswerInput, setPartnerAnswerInput] = useState('');
   const [partnerAnswerError, setPartnerAnswerError] = useState('');
   
-  const currentStep = GAME_STEPS.find(s => s.id === currentStepId) || GAME_STEPS[0];
+  const currentStepIndex = Math.max(GAME_STEPS.findIndex(s => s.id === currentStepId), 0);
+  const currentStep = GAME_STEPS[currentStepIndex];
+  const reachedSteps = GAME_STEPS.slice(0, currentStepIndex + 1);
+  const completedSteps = GAME_STEPS.slice(0, currentStepIndex);
 
   // これまでに判明した情報(memos)を取得
-  const discoveredMemos = GAME_STEPS.filter(s => s.id <= currentStepId).flatMap(s => s.memos || []);
+  const discoveredMemos = reachedSteps.flatMap(s => s.memos || []);
 
   // 選択可能なアイテムを累積・解放状況から取得する関数
   const getAvailableItemsForLocation = (loc: string) => {
     const items = new Set<string>();
     
     // 1. 各ステップ（現在のステップ含む）で解放されたアイテム
-    for (let i = 0; i <= currentStepId; i++) {
-      const step = GAME_STEPS.find(s => s.id === i);
+    reachedSteps.forEach(step => {
       if (step && step.unlockedLocationItems && step.unlockedLocationItems[loc]) {
         step.unlockedLocationItems[loc].forEach(item => items.add(item));
       }
-    }
+    });
     
     // 2. 解答済みの相棒クイズによって解放されたアイテム
-    for (let i = 0; i <= currentStepId; i++) {
-      const step = GAME_STEPS.find(s => s.id === i);
+    reachedSteps.forEach(step => {
       if (step && step.partnerEvents) {
         step.partnerEvents.forEach(event => {
           const qKey = `${step.id}_${event.targetPhoto}`;
@@ -86,19 +114,34 @@ export default function GameInterface() {
           }
         });
       }
-    }
+    });
     
     return Array.from(items);
   };
 
-  // ゲーム開始時にチュートリアルダイアログを表示
-  useEffect(() => {
-    if (!showedPhotosDialog) {
-      setTutorialDialog('tutorial_photos');
-      setShowedPhotosDialog(true);
+  const closeRulesInfo = () => {
+    setShowRulesInfo(false);
+    if (isRulesInfoUnlocked && !hasStartedTabGuide) {
+      setTabGuideStep('photos');
+      setHasStartedTabGuide(true);
     }
-  }, []);
+  };
 
+  const startCutIn = (lines: CutInLine[]) => {
+    setCutInLines(lines);
+    setCutInIndex(0);
+  };
+
+  const advanceCutIn = () => {
+    if (cutInIndex >= cutInLines.length - 1) {
+      setCutInLines([]);
+      setCutInIndex(0);
+      return;
+    }
+    setCutInIndex(cutInIndex + 1);
+  };
+
+  // ゲーム開始時にチュートリアルダイアログを表示
   const handlePartnerClick = (message: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setActivePartnerMessage(message);
@@ -116,6 +159,13 @@ export default function GameInterface() {
     setPuzzleInput('');
     setPhase('search');
     setIsImageCollapsed(true);
+    if (currentStepIndex === 0) {
+      setIsRulesInfoUnlocked(true);
+      setShowRulesInfoPrompt(true);
+      startCutIn(CUT_IN_LINES.tutorialPuzzleSolved);
+    } else if (currentStepIndex === 1) {
+      startCutIn(CUT_IN_LINES.stepOnePuzzleSolved);
+    }
 
     // お題表示時に写真を更新・新規解放
     const newlyUnlocked = currentStep.unlockedPhotos;
@@ -168,8 +218,8 @@ export default function GameInterface() {
       setErrorMsg('');
       setSearchItem('');
       // 次のステップへ
-      if (currentStepId < GAME_STEPS.length - 1) {
-        const nextStep = GAME_STEPS.find(s => s.id === currentStepId + 1)!;
+      if (currentStepIndex < GAME_STEPS.length - 1) {
+        const nextStep = GAME_STEPS[currentStepIndex + 1];
         setCurrentStepId(nextStep.id);
         setPhase('puzzle');
         setIsPuzzleSolvedPending(false); // ステップ遷移時にリセット
@@ -201,6 +251,12 @@ export default function GameInterface() {
         // メインタブに戻し、相棒のメッセージもリセットする
         setActivePartnerMessage(null);
         setActiveTab('main');
+        if (currentStepIndex === 0) {
+          startCutIn(CUT_IN_LINES.stepOnePuzzleStart);
+        }
+        if (nextStep.memos?.length) {
+          setTutorialDialog('new_memo_unlocked');
+        }
       } else {
         alert('ゲームクリア！おめでとうございます！');
       }
@@ -208,6 +264,18 @@ export default function GameInterface() {
       setErrorMsg('場所、位置、またはアイテム名が違います。');
     }
   };
+
+  const activeCutInLine = cutInLines[cutInIndex] || null;
+  const cutInTheme = activeCutInLine?.speaker === 'ゲームマスター'
+    ? 'border-rose-400/70 from-rose-950/95 via-slate-950/95 to-rose-900/90 text-rose-100'
+    : activeCutInLine?.speaker === '自分'
+      ? 'border-cyan-400/70 from-cyan-950/95 via-slate-950/95 to-blue-900/90 text-cyan-100'
+      : 'border-indigo-400/70 from-indigo-950/95 via-slate-950/95 to-violet-900/90 text-indigo-100';
+  const cutInBadgeClass = activeCutInLine?.speaker === 'ゲームマスター'
+    ? 'bg-rose-500 text-white'
+    : activeCutInLine?.speaker === '自分'
+      ? 'bg-cyan-500 text-slate-950'
+      : 'bg-indigo-500 text-white';
 
   return (
     <div className="flex flex-col h-[100dvh] max-w-md mx-auto bg-slate-900 relative overflow-hidden">
@@ -218,7 +286,7 @@ export default function GameInterface() {
           {currentStep.title}
         </h1>
         <div className="text-xs bg-slate-800 px-2 py-1 rounded-full border border-slate-700">
-          Step {currentStepId} / {GAME_STEPS.length - 1}
+          Step {currentStepIndex} / {GAME_STEPS.length - 1}
         </div>
       </header>
 
@@ -226,6 +294,27 @@ export default function GameInterface() {
       <main className="flex-1 overflow-y-auto no-scrollbar pb-24 relative">
         {activeTab === 'main' && (
           <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {isRulesInfoUnlocked && (
+              <div className="absolute right-4 bottom-20 z-30 flex flex-col items-end gap-2">
+                {showRulesInfoPrompt && (
+                  <div className="max-w-56 rounded-xl border border-cyan-300/40 bg-slate-800/95 px-3 py-2 text-xs font-bold leading-relaxed text-cyan-50 shadow-lg shadow-cyan-950/40 animate-pulse">
+                    ゲームのルールはいつでも確認できます。まずはここを押してみましょう。
+                  </div>
+                )}
+                <button
+                  type="button"
+                  aria-label="ゲームのルールを確認する"
+                  onClick={() => {
+                    setShowRulesInfo(true);
+                    setShowRulesInfoPrompt(false);
+                  }}
+                  className={`flex h-12 w-12 items-center justify-center rounded-full border border-cyan-300/50 bg-slate-800/90 text-cyan-300 shadow-lg shadow-cyan-950/40 backdrop-blur transition-all hover:border-cyan-200 hover:bg-slate-700 active:scale-95 ${showRulesInfoPrompt ? 'animate-bounce ring-2 ring-cyan-300/70' : ''}`}
+                >
+                  <span className="text-xl font-black leading-none">i</span>
+                </button>
+              </div>
+            )}
+
             {/* Image Toggle Bar */}
             <div 
               className="bg-slate-800 border-b border-slate-700 flex justify-between items-center px-4 py-2 cursor-pointer hover:bg-slate-700 transition-colors"
@@ -537,17 +626,23 @@ export default function GameInterface() {
               {unlockedPhotos.map(photo => {
                 const isNew = newPhotos.includes(photo);
                 const currentFilename = photoFiles[photo] || photo;
+                const shouldGuidePhotoA = tabGuideStep === 'photoA' && photo === 'A';
                 return (
                   <div
                     key={photo}
-                    className={`relative rounded-xl overflow-hidden aspect-square bg-slate-800 border-2 cursor-pointer transition-all duration-300 group hover:opacity-90 ${isNew ? 'border-amber-500 animate-[pulse-border_2s_ease-in-out_infinite]' : 'border-slate-700 hover:border-slate-500'}`}
+                    className={`relative rounded-xl overflow-hidden aspect-square bg-slate-800 border-2 cursor-pointer transition-all duration-300 group hover:opacity-90 ${shouldGuidePhotoA ? 'z-10 border-cyan-300 ring-4 ring-cyan-300/60 animate-pulse' : isNew ? 'border-amber-500 animate-[pulse-border_2s_ease-in-out_infinite]' : 'border-slate-700 hover:border-slate-500'}`}
                     onClick={() => {
                       setZoomedImage(`/images/${currentFilename}.png`);
-                      if (currentStepId === 0 && photo === 'A' && !showedPuzzleDialog) {
-                        setShowPuzzleDialogAfterZoom(true);
+                      if (shouldGuidePhotoA) {
+                        setTabGuideStep('map');
                       }
                     }}
                   >
+                    {shouldGuidePhotoA && (
+                      <div className="absolute left-2 right-2 top-2 z-20 rounded-xl border border-cyan-300/40 bg-slate-900/95 px-3 py-2 text-center text-xs font-bold leading-relaxed text-cyan-50 shadow-lg animate-pulse">
+                        写真Aを押して確認しましょう。
+                      </div>
+                    )}
                     <Image 
                       src={`/images/${currentFilename}.png`} 
                       alt={`Location ${photo}`} 
@@ -573,7 +668,7 @@ export default function GameInterface() {
           <div className="p-4 h-full flex flex-col animate-in fade-in zoom-in-95 duration-300">
             <h2 className="text-xl font-bold text-center text-white mb-4">過去の記録</h2>
             <div className="flex flex-col gap-4">
-              {GAME_STEPS.filter(s => s.id < currentStepId).map(step => (
+              {completedSteps.map(step => (
                 <div key={step.id} className="bg-slate-800 rounded-xl p-3 border border-slate-700">
                   <h3 className="font-bold text-blue-400 border-b border-slate-700 pb-1 mb-2">{step.title}</h3>
                   <div className="flex gap-3">
@@ -615,7 +710,7 @@ export default function GameInterface() {
                   )}
                 </div>
               ))}
-              {GAME_STEPS.filter(s => s.id < currentStepId).length === 0 && (
+              {completedSteps.length === 0 && (
                 <div className="text-center text-slate-500 text-sm mt-8 p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
                   まだクリアしたステップがありません。
                 </div>
@@ -639,9 +734,19 @@ export default function GameInterface() {
         </button>
 
         <button 
-          onClick={() => setActiveTab('map')}
-          className={`flex flex-col items-center justify-center w-full h-full transition-colors ${activeTab === 'map' ? 'text-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}
+          onClick={() => {
+            setActiveTab('map');
+            if (tabGuideStep === 'map') {
+              setTabGuideStep(null);
+            }
+          }}
+          className={`relative flex flex-col items-center justify-center w-full h-full transition-colors ${activeTab === 'map' ? 'text-emerald-400' : 'text-slate-500 hover:text-slate-300'} ${tabGuideStep === 'map' ? 'animate-bounce text-emerald-300' : ''}`}
         >
+          {tabGuideStep === 'map' && (
+            <div className="absolute bottom-full mb-2 w-36 rounded-xl border border-emerald-300/40 bg-slate-800/95 px-3 py-2 text-center text-xs font-bold leading-relaxed text-emerald-50 shadow-lg shadow-emerald-950/40 animate-pulse">
+              次にマップ＆メモを確認しましょう。
+            </div>
+          )}
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
           </svg>
@@ -649,9 +754,19 @@ export default function GameInterface() {
         </button>
 
         <button 
-          onClick={() => setActiveTab('photos')}
-          className={`relative flex flex-col items-center justify-center w-full h-full transition-colors ${activeTab === 'photos' ? 'text-amber-400' : 'text-slate-500 hover:text-slate-300'}`}
+          onClick={() => {
+            setActiveTab('photos');
+            if (tabGuideStep === 'photos') {
+              setTabGuideStep('photoA');
+            }
+          }}
+          className={`relative flex flex-col items-center justify-center w-full h-full transition-colors ${activeTab === 'photos' ? 'text-amber-400' : 'text-slate-500 hover:text-slate-300'} ${tabGuideStep === 'photos' ? 'animate-bounce text-amber-300' : ''}`}
         >
+          {tabGuideStep === 'photos' && (
+            <div className="absolute bottom-full mb-2 w-32 rounded-xl border border-amber-300/40 bg-slate-800/95 px-3 py-2 text-center text-xs font-bold leading-relaxed text-amber-50 shadow-lg shadow-amber-950/40 animate-pulse">
+              次に写真タブを確認しましょう。
+            </div>
+          )}
           <div className="relative">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -676,6 +791,36 @@ export default function GameInterface() {
           <span className="text-[10px] font-medium">ログ</span>
         </button>
       </nav>
+
+      {activeCutInLine && (
+        <button
+          type="button"
+          className="fixed inset-0 z-[70] flex items-center justify-center overflow-hidden bg-black/65 px-3 backdrop-blur-[2px] animate-in fade-in duration-200"
+          onClick={advanceCutIn}
+          aria-label="会話を進める"
+        >
+          <div className="absolute inset-x-[-12%] top-1/2 h-28 -translate-y-1/2 -skew-y-3 bg-white/10 blur-sm" />
+          <div className={`relative w-full max-w-md -skew-y-3 border-y-2 bg-gradient-to-r px-5 py-5 text-left shadow-[0_0_40px_rgba(99,102,241,0.35)] ${cutInTheme}`}>
+            <div className="skew-y-3">
+              <div className="mb-3 flex items-center gap-3">
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-black shadow-lg ${cutInBadgeClass}`}>
+                  {activeCutInLine.speaker.slice(0, 1)}
+                </span>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.25em] text-white/50">COMMUNICATION</p>
+                  <p className="text-lg font-black text-white">{activeCutInLine.speaker}</p>
+                </div>
+              </div>
+              <p className="text-xl font-bold leading-relaxed text-white drop-shadow">
+                {activeCutInLine.text}
+              </p>
+              <p className="mt-4 text-right text-xs font-bold tracking-widest text-white/50">
+                TAP TO CONTINUE {cutInIndex + 1}/{cutInLines.length}
+              </p>
+            </div>
+          </div>
+        </button>
+      )}
       
       {/* Tutorial Dialog */}
       {tutorialDialog && (
@@ -732,6 +877,68 @@ export default function GameInterface() {
                 </button>
               </>
             )}
+            {tutorialDialog === 'new_memo_unlocked' && (
+              <>
+                <div className="mb-4">
+                  <p className="text-slate-100 text-base leading-relaxed">
+                    新たな仕様が解放されました。メモをご確認ください。
+                  </p>
+                </div>
+                <button
+                  onClick={() => setTutorialDialog(null)}
+                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold py-2 rounded-lg hover:from-emerald-500 hover:to-teal-500 active:scale-95 transition-all"
+                >
+                  OK
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showRulesInfo && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={closeRulesInfo}
+        >
+          <div
+            className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-2xl border border-cyan-400/40 bg-slate-900 p-5 text-slate-100 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-bold text-cyan-300">ゲームのルール</h2>
+              <button
+                type="button"
+                aria-label="閉じる"
+                onClick={closeRulesInfo}
+                className="rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-5 text-sm leading-relaxed">
+              <section>
+                <h3 className="mb-2 font-bold text-emerald-300">クリア条件</h3>
+                <p>マップ上の「あ」〜「く」の全ての場所に対して、お題のアイテムを提出すること。</p>
+                <p className="mt-2 text-slate-300">※謎のイラスト内に登場したアイテムしか視認できない。</p>
+              </section>
+
+              <section>
+                <h3 className="mb-2 font-bold text-amber-300">アイテム提出方法</h3>
+                <ol className="list-decimal space-y-1 pl-5">
+                  <li>各場所の謎に正解するとお題が出題される</li>
+                  <li>お題に沿ったアイテムの場所を特定すると、提出場所へ自動でワープする。</li>
+                </ol>
+              </section>
+
+              <section>
+                <h3 className="mb-2 font-bold text-indigo-300">視認できないアイテムを提出するには？</h3>
+                <p>視認できているアイテムを基準に、写真上でどの位置にあるかを特定すると、最も近いアイテムが一つ提出される</p>
+              </section>
+            </div>
           </div>
         </div>
       )}
@@ -740,14 +947,7 @@ export default function GameInterface() {
       {zoomedImage && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => {
-            setZoomedImage(null);
-            if (showPuzzleDialogAfterZoom) {
-              setTutorialDialog('start_puzzle');
-              setShowedPuzzleDialog(true);
-              setShowPuzzleDialogAfterZoom(false);
-            }
-          }}
+          onClick={() => setZoomedImage(null)}
         >
           <div className="relative w-full h-full max-w-lg mx-auto flex items-center justify-center p-4">
             <button
@@ -755,11 +955,6 @@ export default function GameInterface() {
               onClick={(e) => {
                 e.stopPropagation();
                 setZoomedImage(null);
-                if (showPuzzleDialogAfterZoom) {
-                  setTutorialDialog('start_puzzle');
-                  setShowedPuzzleDialog(true);
-                  setShowPuzzleDialogAfterZoom(false);
-                }
               }}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
