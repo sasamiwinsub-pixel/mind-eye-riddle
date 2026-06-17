@@ -31,6 +31,13 @@ export interface StepData {
   }[];
 }
 
+export interface LastStepSubmissionData {
+  stepIndex: number;
+  label: string;
+  originalSubmittedItem: string;
+  retryItem: string;
+}
+
 export const GAME_STEPS: StepData[] = [
   {
     id: 0,
@@ -137,7 +144,7 @@ export const GAME_STEPS: StepData[] = [
   },
   {
     id: 4,
-    title: '提出場所：「え」',
+    title: '提出場所：「か」',
     puzzleImage: '/images/step4.png',
     themeText: 'かけるのに使うもの',
     puzzleAnswer: 'だい',
@@ -151,7 +158,7 @@ export const GAME_STEPS: StepData[] = [
   },
   {
     id: 5,
-    title: 'Step 5: 「お」',
+    title: 'Step 5: 「き」',
     puzzleImage: '/images/step5.png',
     themeText: 'アルミ',
     puzzleAnswer: 'くも',
@@ -184,7 +191,7 @@ export const GAME_STEPS: StepData[] = [
   },
   {
     id: 6,
-    title: 'Step 6: 「か」',
+    title: 'Step 6: 「く」',
     puzzleImage: '/images/step6.png',
     themeText: '尻に敷かれるもの',
     puzzleAnswer: '6',
@@ -196,7 +203,7 @@ export const GAME_STEPS: StepData[] = [
   },
   {
     id: 7,
-    title: 'Step 7: 「き」',
+    title: 'Step 7: 「け」',
     puzzleImage: '/images/step7.png',
     themeText: '蜘蛛',
     puzzleAnswer: '7',
@@ -206,18 +213,18 @@ export const GAME_STEPS: StepData[] = [
       K: ['暖簾']
     },
   },
-  {
-    id: 8,
-    title: 'Step 8: 「く」',
-    puzzleImage: '/images/step8.png',
-    themeText: '「く」から始まるものを探せ',
-    puzzleAnswer: '8',
-    searchTarget: { location: 'L', position: '右', item: 'くるま' },
-    unlockedPhotos: ['K', 'L'],
-    unlockedLocationItems: {
-      L: ['くるま', 'バイク', '自転車']
-    },
-  },
+];
+
+export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
+  { stepIndex: 0, label: '0', originalSubmittedItem: 'キー', retryItem: 'キー' },
+  { stepIndex: 1, label: '1', originalSubmittedItem: '電池', retryItem: '缶かつ炭酸飲料' },
+  { stepIndex: 2, label: '1-5', originalSubmittedItem: 'ライオンの銅像', retryItem: '机' },
+  { stepIndex: 3, label: '2', originalSubmittedItem: '卵', retryItem: '横川' },
+  { stepIndex: 4, label: '3', originalSubmittedItem: 'バスボール', retryItem: 'ピンポン玉' },
+  { stepIndex: 5, label: '4', originalSubmittedItem: 'ハンガー', retryItem: 'お金' },
+  { stepIndex: 6, label: '5', originalSubmittedItem: '缶', retryItem: '1円玉' },
+  { stepIndex: 7, label: '6', originalSubmittedItem: '座布団', retryItem: '座布団' },
+  { stepIndex: 8, label: '7', originalSubmittedItem: '蜘蛛', retryItem: '蜘蛛' },
 ];
 
 export const LOCATIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];

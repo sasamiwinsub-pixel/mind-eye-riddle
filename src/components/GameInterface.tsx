@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { GAME_STEPS, LOCATIONS, POSITIONS } from '@/constants/gameData';
+import { GAME_STEPS, LAST_STEP_SUBMISSIONS, LOCATIONS, POSITIONS } from '@/constants/gameData';
 
 type Tab = 'main' | 'map' | 'photos' | 'log';
 type DialogMessage = 'tutorial_photos' | 'start_puzzle' | 'tutorial_search' | 'new_memo_unlocked' | null;
@@ -10,6 +10,15 @@ type CutInSpeaker = '相棒' | '自分' | 'ゲームマスター';
 type CutInLine = {
   speaker: CutInSpeaker;
   text: string;
+};
+type FinalSubmission = {
+  location: string;
+  position: string;
+  item: string;
+};
+type PendingCutIn = {
+  lines: CutInLine[];
+  stepIndex: number;
 };
 
 const CUT_IN_LINES = {
@@ -30,6 +39,7 @@ const CUT_IN_LINES = {
   ],
 } satisfies Record<string, CutInLine[]>;
 
+
 export default function GameInterface() {
   const [currentStepId, setCurrentStepId] = useState(0);
   const [phase, setPhase] = useState<'puzzle' | 'search'>('puzzle');
@@ -40,8 +50,20 @@ export default function GameInterface() {
   const [searchLocation, setSearchLocation] = useState(LOCATIONS[0]);
   const [searchPosition, setSearchPosition] = useState(POSITIONS[0]);
   const [searchItem, setSearchItem] = useState('');
+  const [isFinalReviewStep, setIsFinalReviewStep] = useState(false);
+  const [finalSubmissions, setFinalSubmissions] = useState<FinalSubmission[]>(
+    LAST_STEP_SUBMISSIONS.map(submission => {
+      const step = GAME_STEPS[submission.stepIndex];
+      return {
+        location: step.searchTarget.location,
+        position: step.searchTarget.position,
+        item: submission.originalSubmittedItem === submission.retryItem ? submission.retryItem : '',
+      };
+    })
+  );
 
   const [errorMsg, setErrorMsg] = useState('');
+  const [showCorrectOverlay, setShowCorrectOverlay] = useState(false);
   const [showRulesInfo, setShowRulesInfo] = useState(false);
   const [isRulesInfoUnlocked, setIsRulesInfoUnlocked] = useState(false);
   const [showRulesInfoPrompt, setShowRulesInfoPrompt] = useState(false);
@@ -76,6 +98,11 @@ export default function GameInterface() {
   const [tutorialDialog, setTutorialDialog] = useState<DialogMessage>(null);
   const [cutInLines, setCutInLines] = useState<CutInLine[]>(CUT_IN_LINES.tutorialStart);
   const [cutInIndex, setCutInIndex] = useState(0);
+  const [pendingCutIn, setPendingCutIn] = useState<PendingCutIn | null>(null);
+  const [cutInLogByStep, setCutInLogByStep] = useState<Record<number, CutInLine[]>>({
+    0: CUT_IN_LINES.tutorialStart,
+  });
+  const [selectedCutInLogStep, setSelectedCutInLogStep] = useState<number | null>(null);
   const [showedSearchTutorialDialog, setShowedSearchTutorialDialog] = useState(false);
 
   // 相棒クイズ解答状態
@@ -85,8 +112,12 @@ export default function GameInterface() {
   
   const currentStepIndex = Math.max(GAME_STEPS.findIndex(s => s.id === currentStepId), 0);
   const currentStep = GAME_STEPS[currentStepIndex];
+  const displayTitle = isFinalReviewStep ? 'FINALSTEP' : currentStep.title;
   const reachedSteps = GAME_STEPS.slice(0, currentStepIndex + 1);
   const completedSteps = GAME_STEPS.slice(0, currentStepIndex);
+  const finalSubmissionTargets = LAST_STEP_SUBMISSIONS;
+
+  const getPartnerEventKey = (stepId: number, eventIndex: number) => `${stepId}_${eventIndex}`;
 
   // これまでに判明した情報(memos)を取得
   const discoveredMemos = reachedSteps.flatMap(s => s.memos || []);
@@ -105,8 +136,8 @@ export default function GameInterface() {
     // 2. 解答済みの相棒クイズによって解放されたアイテム
     reachedSteps.forEach(step => {
       if (step && step.partnerEvents) {
-        step.partnerEvents.forEach(event => {
-          const qKey = `${step.id}_${event.targetPhoto}`;
+        step.partnerEvents.forEach((event, eventIndex) => {
+          const qKey = getPartnerEventKey(step.id, eventIndex);
           if (solvedPartnerQuestions.includes(qKey) && event.questionAnswer) {
             if (event.questionAnswer.unlockLocation === loc) {
               items.add(event.questionAnswer.unlockItem);
@@ -127,9 +158,26 @@ export default function GameInterface() {
     }
   };
 
-  const startCutIn = (lines: CutInLine[]) => {
+  const startCutIn = (lines: CutInLine[], stepIndex = currentStepIndex) => {
     setCutInLines(lines);
     setCutInIndex(0);
+    setCutInLogByStep(prev => ({
+      ...prev,
+      [stepIndex]: [...(prev[stepIndex] || []), ...lines],
+    }));
+  };
+
+  const showCorrectThenCutIn = (lines: CutInLine[], stepIndex = currentStepIndex) => {
+    setPendingCutIn({ lines, stepIndex });
+    setShowCorrectOverlay(true);
+  };
+
+  const closeCorrectOverlay = () => {
+    setShowCorrectOverlay(false);
+    if (pendingCutIn) {
+      startCutIn(pendingCutIn.lines, pendingCutIn.stepIndex);
+      setPendingCutIn(null);
+    }
   };
 
   const advanceCutIn = () => {
@@ -162,9 +210,9 @@ export default function GameInterface() {
     if (currentStepIndex === 0) {
       setIsRulesInfoUnlocked(true);
       setShowRulesInfoPrompt(true);
-      startCutIn(CUT_IN_LINES.tutorialPuzzleSolved);
+      showCorrectThenCutIn(CUT_IN_LINES.tutorialPuzzleSolved, currentStepIndex);
     } else if (currentStepIndex === 1) {
-      startCutIn(CUT_IN_LINES.stepOnePuzzleSolved);
+      showCorrectThenCutIn(CUT_IN_LINES.stepOnePuzzleSolved, currentStepIndex);
     }
 
     // お題表示時に写真を更新・新規解放
@@ -252,20 +300,62 @@ export default function GameInterface() {
         setActivePartnerMessage(null);
         setActiveTab('main');
         if (currentStepIndex === 0) {
-          startCutIn(CUT_IN_LINES.stepOnePuzzleStart);
+          showCorrectThenCutIn(CUT_IN_LINES.stepOnePuzzleStart, currentStepIndex + 1);
         }
         if (nextStep.memos?.length) {
           setTutorialDialog('new_memo_unlocked');
         }
       } else {
-        alert('ゲームクリア！おめでとうございます！');
+        setIsFinalReviewStep(true);
+        setPhase('search');
+        setIsPuzzleSolvedPending(false);
+        setIsImageCollapsed(true);
+        setActivePartnerMessage(null);
+        setActiveTab('main');
+        setErrorMsg('');
       }
     } else {
       setErrorMsg('場所、位置、またはアイテム名が違います。');
     }
   };
 
+  const updateFinalSubmission = (index: number, field: keyof FinalSubmission, value: string) => {
+    setFinalSubmissions(prev => prev.map((submission, i) => {
+      if (i !== index) return submission;
+      return {
+        ...submission,
+        [field]: value,
+        ...(field === 'location' ? { item: '' } : {}),
+      };
+    }));
+  };
+
+  const handleFinalSubmissionsSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const allCorrect = finalSubmissionTargets.every((target, index) => {
+      const originalStep = GAME_STEPS[target.stepIndex];
+      if (target.originalSubmittedItem === target.retryItem) {
+        return true;
+      }
+      const submission = finalSubmissions[index];
+      return submission
+        && submission.location === originalStep.searchTarget.location
+        && submission.position === originalStep.searchTarget.position
+        && submission.item.trim() === target.retryItem;
+    });
+
+    if (allCorrect) {
+      setErrorMsg('');
+      setShowCorrectOverlay(true);
+      alert('ゲームクリア！おめでとうございます！');
+    } else {
+      setErrorMsg('どこかの提出内容が違います。これまでの記録を見直してみましょう。');
+    }
+  };
+
   const activeCutInLine = cutInLines[cutInIndex] || null;
+  const selectedCutInLogLines = selectedCutInLogStep !== null ? cutInLogByStep[selectedCutInLogStep] || [] : [];
+  const selectedCutInLogTitle = selectedCutInLogStep !== null ? GAME_STEPS[selectedCutInLogStep]?.title || '' : '';
   const cutInTheme = activeCutInLine?.speaker === 'ゲームマスター'
     ? 'border-rose-400/70 from-rose-950/95 via-slate-950/95 to-rose-900/90 text-rose-100'
     : activeCutInLine?.speaker === '自分'
@@ -283,10 +373,10 @@ export default function GameInterface() {
       {/* Header */}
       <header className="glass-panel py-3 px-4 flex justify-between items-center z-10">
         <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
-          {currentStep.title}
+          {displayTitle}
         </h1>
         <div className="text-xs bg-slate-800 px-2 py-1 rounded-full border border-slate-700">
-          Step {currentStepIndex} / {GAME_STEPS.length - 1}
+          {isFinalReviewStep ? 'FINAL' : `Step ${currentStepIndex} / ${GAME_STEPS.length - 1}`}
         </div>
       </header>
 
@@ -413,6 +503,94 @@ export default function GameInterface() {
                     </button>
                   </form>
                   )
+                ) : isFinalReviewStep ? (
+                  <form onSubmit={handleFinalSubmissionsSubmit} className="flex flex-col gap-3">
+                    <div className="rounded-xl border border-rose-500/30 bg-rose-950/30 p-3 shadow-[0_0_18px_rgba(244,63,94,0.12)]">
+                      <h3 className="text-sm font-bold text-rose-300">最終提出</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-300">
+                        これまでの提出を、もう一度すべて指定してください。
+                      </p>
+                    </div>
+
+                    <div className="max-h-[42vh] space-y-3 overflow-y-auto pr-1 no-scrollbar">
+                      {finalSubmissionTargets.map((target, index) => {
+                        const originalStep = GAME_STEPS[target.stepIndex];
+                        const isSameAsOriginal = target.originalSubmittedItem === target.retryItem;
+                        const submission = isSameAsOriginal
+                          ? {
+                              location: originalStep.searchTarget.location,
+                              position: originalStep.searchTarget.position,
+                              item: target.retryItem,
+                            }
+                          : finalSubmissions[index];
+                        const availableItems = Array.from(new Set([
+                          ...getAvailableItemsForLocation(submission.location),
+                          ...(submission.location === originalStep.searchTarget.location ? [target.retryItem] : []),
+                        ]));
+                        return (
+                          <div key={`${originalStep.id}-${index}`} className={`rounded-xl border p-3 ${isSameAsOriginal ? 'border-slate-700 bg-slate-800/45 opacity-70' : 'border-slate-700 bg-slate-800/80'}`}>
+                            <div className="mb-2 flex items-center justify-between gap-2">
+                              <span className="text-sm font-bold text-slate-100">{originalStep.title}</span>
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${isSameAsOriginal ? 'bg-slate-700 text-slate-300' : 'bg-slate-900 text-slate-400'}`}>
+                                {isSameAsOriginal ? '変更なし' : `${index + 1}/${finalSubmissionTargets.length}`}
+                              </span>
+                            </div>
+                            <div className="mb-2 rounded-lg border border-slate-700 bg-slate-900/70 px-2 py-1.5 text-[11px] leading-relaxed text-slate-300">
+                              ログで見えないが提出したもの：<span className="font-bold text-slate-100">{target.originalSubmittedItem}</span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <label className="block">
+                                <span className="mb-1 block text-[11px] font-bold text-slate-400">場所</span>
+                                <select
+                                  value={submission.location}
+                                  onChange={(e) => updateFinalSubmission(index, 'location', e.target.value)}
+                                  disabled={isSameAsOriginal}
+                                  className="w-full rounded-lg border border-slate-600 bg-slate-900 p-2 text-sm text-white focus:border-rose-400 focus:outline-none"
+                                >
+                                  {LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
+                                </select>
+                              </label>
+
+                              <label className="block">
+                                <span className="mb-1 block text-[11px] font-bold text-slate-400">位置</span>
+                                <select
+                                  value={submission.position}
+                                  onChange={(e) => updateFinalSubmission(index, 'position', e.target.value)}
+                                  disabled={isSameAsOriginal}
+                                  className="w-full rounded-lg border border-slate-600 bg-slate-900 p-2 text-sm text-white focus:border-rose-400 focus:outline-none"
+                                >
+                                  {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                                </select>
+                              </label>
+                            </div>
+
+                            <label className="mt-2 block">
+                              <span className="mb-1 block text-[11px] font-bold text-slate-400">アイテム</span>
+                              <select
+                                value={submission.item}
+                                onChange={(e) => updateFinalSubmission(index, 'item', e.target.value)}
+                                disabled={isSameAsOriginal}
+                                className="w-full rounded-lg border border-slate-600 bg-slate-900 p-2 text-sm text-white focus:border-rose-400 focus:outline-none"
+                              >
+                                <option value="">選択してください</option>
+                                {availableItems.map(item => (
+                                  <option key={item} value={item}>{item}</option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="mt-1 rounded-lg bg-gradient-to-r from-rose-600 to-red-600 py-3 font-bold text-white shadow-lg transition-all hover:from-rose-500 hover:to-red-500 active:scale-95"
+                    >
+                      提出を確定する
+                    </button>
+                  </form>
                 ) : (
                   <form onSubmit={handleSearchSubmit} className="flex flex-col gap-3">
                     <label className="text-sm text-amber-400 font-semibold">フィールドからお題を探そう！</label>
@@ -536,9 +714,9 @@ export default function GameInterface() {
               
               return (
                 <div className="flex flex-wrap gap-2 mb-4 justify-center">
-                  {availablePartnerEvents.map(event => (
+                  {availablePartnerEvents.map((event, eventIndex) => (
                     <button 
-                      key={event.targetPhoto}
+                      key={`${event.targetPhoto}_${eventIndex}`}
                       onClick={(e) => handlePartnerClick(event.message, e)}
                       className="bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-lg shadow-lg border border-indigo-400/50 flex items-center gap-1.5 backdrop-blur-sm animate-pulse transition-all active:scale-95"
                     >
@@ -553,8 +731,9 @@ export default function GameInterface() {
             {/* Partner Message Area (in Photos Tab) */}
             {(() => {
               if (!activePartnerMessage) return null;
-              const activeEvent = currentStep.partnerEvents?.find(e => e.message === activePartnerMessage);
-              const qKey = activeEvent ? `${currentStepId}_${activeEvent.targetPhoto}` : '';
+              const activeEventIndex = currentStep.partnerEvents?.findIndex(e => e.message === activePartnerMessage) ?? -1;
+              const activeEvent = activeEventIndex >= 0 ? currentStep.partnerEvents?.[activeEventIndex] : undefined;
+              const qKey = activeEvent ? getPartnerEventKey(currentStep.id, activeEventIndex) : '';
               const isSolved = qKey && solvedPartnerQuestions.includes(qKey);
               const hasQuestion = activeEvent && activeEvent.questionAnswer;
 
@@ -668,9 +847,23 @@ export default function GameInterface() {
           <div className="p-4 h-full flex flex-col animate-in fade-in zoom-in-95 duration-300">
             <h2 className="text-xl font-bold text-center text-white mb-4">過去の記録</h2>
             <div className="flex flex-col gap-4">
-              {completedSteps.map(step => (
+              {completedSteps.map((step, stepIndex) => {
+                const stepCutInLog = cutInLogByStep[stepIndex] || [];
+                const submittedAssumption = LAST_STEP_SUBMISSIONS.find(submission => submission.stepIndex === stepIndex);
+                return (
                 <div key={step.id} className="bg-slate-800 rounded-xl p-3 border border-slate-700">
-                  <h3 className="font-bold text-blue-400 border-b border-slate-700 pb-1 mb-2">{step.title}</h3>
+                  <div className="mb-2 flex items-center justify-between gap-2 border-b border-slate-700 pb-1">
+                    <h3 className="font-bold text-blue-400">{step.title}</h3>
+                    {stepCutInLog.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCutInLogStep(stepIndex)}
+                        className="shrink-0 rounded-full border border-indigo-400/50 bg-indigo-900/50 px-2.5 py-1 text-[11px] font-bold text-indigo-100 transition-colors hover:bg-indigo-800"
+                      >
+                        会話ログ
+                      </button>
+                    )}
+                  </div>
                   <div className="flex gap-3">
                     <div 
                       className="relative w-20 h-20 bg-black rounded-lg overflow-hidden shrink-0 cursor-pointer border border-slate-600 hover:opacity-80 transition-opacity"
@@ -697,6 +890,12 @@ export default function GameInterface() {
                     </div>
                   </div>
                   {/* 相棒との会話履歴 */}
+                  {submittedAssumption && (
+                    <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm">
+                      <span className="text-slate-500 text-xs block">提出した想定のもの</span>
+                      <span className="text-slate-200">{submittedAssumption.originalSubmittedItem}</span>
+                    </div>
+                  )}
                   {step.partnerEvents?.map(event => 
                     readPartnerMessages.includes(event.message) && (
                       <div key={event.message} className="mt-3 bg-indigo-900/40 p-2.5 rounded-xl rounded-tl-none border border-indigo-500/30 text-sm">
@@ -709,7 +908,8 @@ export default function GameInterface() {
                     )
                   )}
                 </div>
-              ))}
+                );
+              })}
               {completedSteps.length === 0 && (
                 <div className="text-center text-slate-500 text-sm mt-8 p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
                   まだクリアしたステップがありません。
@@ -792,6 +992,19 @@ export default function GameInterface() {
         </button>
       </nav>
 
+      {showCorrectOverlay && (
+        <button
+          type="button"
+          aria-label="正解表示を閉じる"
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/45 backdrop-blur-[2px] animate-in fade-in duration-150"
+          onClick={closeCorrectOverlay}
+        >
+          <span className="rounded-2xl border-2 border-emerald-300/70 bg-emerald-500 px-10 py-6 text-4xl font-black tracking-widest text-white shadow-[0_0_35px_rgba(16,185,129,0.65)] animate-in zoom-in-95 duration-200">
+            正解
+          </span>
+        </button>
+      )}
+
       {activeCutInLine && (
         <button
           type="button"
@@ -820,6 +1033,47 @@ export default function GameInterface() {
             </div>
           </div>
         </button>
+      )}
+
+      {selectedCutInLogStep !== null && (
+        <div
+          className="fixed inset-0 z-[65] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setSelectedCutInLogStep(null)}
+        >
+          <div
+            className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-2xl border border-indigo-400/40 bg-slate-900 p-5 text-slate-100 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-300/70">COMMUNICATION LOG</p>
+                <h2 className="text-lg font-bold text-indigo-200">{selectedCutInLogTitle}</h2>
+              </div>
+              <button
+                type="button"
+                aria-label="閉じる"
+                onClick={() => setSelectedCutInLogStep(null)}
+                className="rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-3">
+              {selectedCutInLogLines.map((line, index) => (
+                <div key={`${line.speaker}-${index}`} className="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="rounded-full bg-indigo-500 px-2 py-0.5 text-[11px] font-bold text-white">
+                      {line.speaker}
+                    </span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-slate-100">{line.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
       
       {/* Tutorial Dialog */}
@@ -852,21 +1106,6 @@ export default function GameInterface() {
                 <div className="mb-4">
                   <p className="text-slate-100 text-base leading-relaxed">
                     それではメインタブの謎を解こう！
-                  </p>
-                </div>
-                <button
-                  onClick={() => setTutorialDialog(null)}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-2 rounded-lg hover:from-blue-500 hover:to-indigo-500 active:scale-95 transition-all"
-                >
-                  OK
-                </button>
-              </>
-            )}
-            {tutorialDialog === 'tutorial_search' && (
-              <>
-                <div className="mb-4">
-                  <p className="text-slate-100 text-base leading-relaxed">
-                    お題に合うアイテムは見えない状態だ。今見えているものから推測して、そのアイテムの場所を指定しよう
                   </p>
                 </div>
                 <button
@@ -922,7 +1161,7 @@ export default function GameInterface() {
             <div className="space-y-5 text-sm leading-relaxed">
               <section>
                 <h3 className="mb-2 font-bold text-emerald-300">クリア条件</h3>
-                <p>マップ上の「あ」〜「く」の全ての場所に対して、お題のアイテムを提出すること。</p>
+                <p>マップ上の「あ」〜「け」の全ての場所に対して、お題のアイテムを提出すること。</p>
                 <p className="mt-2 text-slate-300">※謎のイラスト内に登場したアイテムしか視認できない。</p>
               </section>
 

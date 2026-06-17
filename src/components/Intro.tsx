@@ -19,7 +19,7 @@ export default function Intro({ onStartGame }: IntroProps) {
     { speaker: 'rule', text: '1. 謎を解く' },
     { speaker: 'rule', text: '2. 正解するとお題が出る' },
     { speaker: 'rule', text: '3. お題に沿ったアイテムをゲームフィールド上から見つけて提出する' },
-    { speaker: 'rule', text: '4. 1に戻って繰り返す。提出場所「あ」～「く」までの8つ全てが完了すればゲームクリア' },
+    { speaker: 'rule', text: '4. 1に戻って繰り返す。提出場所「あ」～「け」までの8つ全てが完了すればゲームクリア' },
     { speaker: 'rule', text: 'あなたの相棒はゲームフィールドの中にいて通信が可能です。ただし、相棒は物に干渉できず、幽体離脱でフィールドの様子を探ることしかできません。' },
     { speaker: 'title', text: '重要なルール' },
     { speaker: 'rule', text: '・謎の画像内にイラストで登場したアイテムしか視認することができない' },
