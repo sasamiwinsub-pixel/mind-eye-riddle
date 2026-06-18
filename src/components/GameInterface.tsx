@@ -15,6 +15,7 @@ type FinalSubmission = {
   location: string;
   position: string;
   item: string;
+  specifiedName: string;
 };
 type PendingCutIn = {
   lines: CutInLine[];
@@ -24,7 +25,6 @@ type PendingCutIn = {
 const CUT_IN_LINES = {
   tutorialStart: [
     { speaker: '相棒', text: '立山君、聞こえる？' },
-    { speaker: '自分', text: '相棒！！' },
     { speaker: '相棒', text: '今は何もない真っ白の空間なんだけど、これからゲーム開始みたいだね' },
     { speaker: 'ゲームマスター', text: 'ただいまよりゲームのチュートリアルを開始します。まずはこの謎を解いてください' },
   ],
@@ -45,13 +45,14 @@ const CUT_IN_LINES = {
     { speaker: '相棒', text: 'あと一つ提出するだけだ！' },
     { speaker: 'ゲームマスター', text: '残念ですが、提出場所「お」が、たった今正解から不正解判定に変わりました' },
     { speaker: '相棒', text: '何だって！？謎の球体が一度正解になったのに、不正解に変わったの...か？ひとまず「お」の場所を見に行ってみるよ' },
-    { speaker: 'ゲームマスター', text: '一度不正解となったため、全てを再提出してもらいます。ただし、別解があるお題では同じものだと不正解となります。それに伴い、新たな機能が解放されました' },
+    { speaker: 'ゲームマスター', text: '一度不正解となったため、全てを再提出してもらいます。ただし、別解があるお題では同じものだと不正解となります。それに伴い、新たな機能もとい制約が解放されました' },
     { speaker: 'ゲームマスター', text: '転送対象の名称まで指定することができるようになりました。名称を指定した場合、同時に複数個転送することもできます' },
     { speaker: 'ゲームマスター', text: '我々はフェアさを大事にしているので、一つだけアドバイスを差し上げましょう。「お」を確認した後は、ひとまずお題「かけるもの」を再提出してみましょう' },
   ],
   lastStepTwoStart: [
     { speaker: '相棒', text: 'まさか募金箱のお金を移動させるなんて...。立山君はこういう時に頼もしいけど、友人の横山としては倫理観が心配だね' },
-    { speaker: '相棒', text: 'あ、君に負けじと一つやってみたいことをしても良いかい？' },
+    { speaker: 'ゲームマスター', text: 'ご安心ください。元々空の募金箱に6枚の硬貨、114円を事前に募金をしておきました。窃盗には当たらないのでご安心を' },
+    { speaker: '相棒', text: 'なら、大丈夫か。あ、君に負けじと一つやってみたいことをしても良いかい？' },
     { speaker: '相棒', text: '実は提出時以外で一度だけ転送をさせる権利が僕に与えられていたんだけど、その権利をここで行使したい' },
     { speaker: '相棒', text: '僕の予想だと提出場所のどこかが温泉だと思うのだけど、温泉だと思う場所に一度球体として提出したものを転送してみたいんだ' },
   ],
@@ -87,6 +88,7 @@ export default function GameInterface() {
   const [searchItem, setSearchItem] = useState('');
   const [isFollowUpPuzzle, setIsFollowUpPuzzle] = useState(false);
   const [lastStep, setLastStep] = useState<0 | 1 | 2 | 3>(0);
+  const [lastStepOneName, setLastStepOneName] = useState('');
   const [hotSpringAnswer, setHotSpringAnswer] = useState('');
   const [finalSubmissions, setFinalSubmissions] = useState<FinalSubmission[]>(
     LAST_STEP_SUBMISSIONS.map(submission => {
@@ -94,7 +96,8 @@ export default function GameInterface() {
       return {
         location: step.searchTarget.location,
         position: step.searchTarget.position,
-        item: !submission.isPending && submission.originalSubmittedItem === submission.retryItem ? submission.retryItem : '',
+        item: !submission.isPending && submission.originalSubmittedItem === submission.retryItem ? step.searchTarget.item : '',
+        specifiedName: '',
       };
     })
   );
@@ -398,14 +401,20 @@ export default function GameInterface() {
 
   const handleLastStepOneSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchLocation === 'K' && searchItem === '募金箱' && searchPosition === '中') {
+    if (
+      searchLocation === 'K'
+      && searchItem === '募金箱'
+      && searchPosition === '中'
+      && matchesTextAnswer(lastStepOneName, ['お金'])
+    ) {
       setErrorMsg('');
       setSearchItem('');
+      setLastStepOneName('');
       setLastStep(2);
       showCorrectThenCutIn(CUT_IN_LINES.lastStepTwoStart, currentStepIndex);
       return;
     }
-    setErrorMsg('場所、位置、またはアイテム名が違います。');
+    setErrorMsg('場所、位置、アイテム、または名称指定が違います。');
   };
 
   const handleLastStepTwoSubmit = (e: React.FormEvent) => {
@@ -427,14 +436,12 @@ export default function GameInterface() {
     e.preventDefault();
     const allCorrect = finalSubmissionTargets.every((target, index) => {
       const originalStep = GAME_STEPS[target.stepIndex];
-      if (!target.isPending && target.originalSubmittedItem === target.retryItem) {
-        return true;
-      }
       const submission = finalSubmissions[index];
       return submission
         && submission.location === originalStep.searchTarget.location
         && submission.position === originalStep.searchTarget.position
-        && submission.item.trim() === target.retryItem;
+        && submission.item === originalStep.searchTarget.item
+        && matchesTextAnswer(submission.specifiedName, [target.retryItem]);
     });
 
     if (allCorrect) {
@@ -609,7 +616,7 @@ export default function GameInterface() {
                     <div className="rounded-xl border border-amber-500/30 bg-amber-950/30 p-3">
                       <h3 className="text-sm font-bold text-amber-300">「かけるもの」を再提出</h3>
                       <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                        場所・アイテム・位置を選択して、まず一つ提出してください。
+                        場所・アイテム・位置を選択し、転送対象の名称も指定してください。
                       </p>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -650,6 +657,17 @@ export default function GameInterface() {
                         {POSITIONS.map(position => <option key={position} value={position}>{position}</option>)}
                       </select>
                     </label>
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-bold text-amber-300">名称指定（必須）</span>
+                      <input
+                        type="text"
+                        value={lastStepOneName}
+                        onChange={(e) => setLastStepOneName(e.target.value)}
+                        required
+                        className="w-full rounded-lg border border-amber-500/50 bg-slate-800 p-3 text-white focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                        placeholder="転送するものの名称"
+                      />
+                    </label>
                     <button
                       type="submit"
                       className="rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 py-3 font-bold text-white shadow-lg transition-all hover:from-amber-500 hover:to-orange-500 active:scale-95"
@@ -667,13 +685,17 @@ export default function GameInterface() {
                     </div>
                     <label className="block">
                       <span className="mb-1 block text-xs text-slate-400">提出場所</span>
-                      <input
-                        type="text"
+                      <select
                         value={hotSpringAnswer}
                         onChange={(e) => setHotSpringAnswer(e.target.value)}
+                        required
                         className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3 text-center text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                        placeholder="ひらがなで回答"
-                      />
+                      >
+                        <option value="">選択してください</option>
+                        {['あ', 'い', 'う', 'え', 'お', 'か', 'き', 'く', 'け'].map(place => (
+                          <option key={place} value={place}>{place}</option>
+                        ))}
+                      </select>
                     </label>
                     <button
                       type="submit"
@@ -687,7 +709,7 @@ export default function GameInterface() {
                     <div className="rounded-xl border border-rose-500/30 bg-rose-950/30 p-3 shadow-[0_0_18px_rgba(244,63,94,0.12)]">
                       <h3 className="text-sm font-bold text-rose-300">最終提出</h3>
                       <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                        これまでの提出を、もう一度すべて指定してください。
+                        これまでの提出を、通常選択と転送対象の名称指定を含めてもう一度すべて指定してください。
                       </p>
                     </div>
 
@@ -695,16 +717,10 @@ export default function GameInterface() {
                       {finalSubmissionTargets.map((target, index) => {
                         const originalStep = GAME_STEPS[target.stepIndex];
                         const isSameAsOriginal = !target.isPending && target.originalSubmittedItem === target.retryItem;
-                        const submission = isSameAsOriginal
-                          ? {
-                              location: originalStep.searchTarget.location,
-                              position: originalStep.searchTarget.position,
-                              item: target.retryItem,
-                            }
-                          : finalSubmissions[index];
+                        const submission = finalSubmissions[index];
                         const availableItems = Array.from(new Set([
                           ...getAvailableItemsForLocation(submission.location),
-                          ...(submission.location === originalStep.searchTarget.location ? [target.retryItem] : []),
+                          ...(submission.location === originalStep.searchTarget.location ? [originalStep.searchTarget.item] : []),
                         ]));
                         return (
                           <div key={`${originalStep.id}-${index}`} className={`rounded-xl border p-3 ${isSameAsOriginal ? 'border-slate-700 bg-slate-800/45 opacity-70' : 'border-slate-700 bg-slate-800/80'}`}>
@@ -761,6 +777,17 @@ export default function GameInterface() {
                                   <option key={item} value={item}>{item}</option>
                                 ))}
                               </select>
+                            </label>
+                            <label className="mt-2 block">
+                              <span className="mb-1 block text-[11px] font-bold text-rose-300">名称指定（必須）</span>
+                              <input
+                                type="text"
+                                value={submission.specifiedName}
+                                onChange={(e) => updateFinalSubmission(index, 'specifiedName', e.target.value)}
+                                required
+                                className="w-full rounded-lg border border-rose-500/40 bg-slate-900 p-2 text-sm text-white focus:border-rose-400 focus:outline-none"
+                                placeholder="転送するものの名称"
+                              />
                             </label>
                           </div>
                         );
@@ -987,8 +1014,9 @@ export default function GameInterface() {
               );
             })()}
             
-            <div className="grid grid-cols-2 gap-3 overflow-y-auto pb-4 no-scrollbar">
-              {unlockedPhotos.map(photo => {
+            <div className="min-h-0 flex-1 overflow-y-auto pb-4 no-scrollbar">
+              <div className="grid grid-cols-2 gap-3">
+                {unlockedPhotos.map(photo => {
                 const isNew = newPhotos.includes(photo);
                 const currentFilename = photoFiles[photo] || photo;
                 const shouldGuidePhotoA = tabGuideStep === 'photoA' && photo === 'A';
@@ -1024,7 +1052,8 @@ export default function GameInterface() {
                     </div>
                   </div>
                 );
-              })}
+                })}
+              </div>
             </div>
           </div>
         )}
