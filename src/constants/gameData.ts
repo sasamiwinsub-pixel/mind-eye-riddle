@@ -6,6 +6,12 @@ export interface StepData {
   puzzleImage: string;
   themeText: string;
   puzzleAnswer: string; // 前半のテキスト入力正解
+  acceptedPuzzleAnswers?: string[];
+  followUpPuzzle?: {
+    image: string;
+    answer: string;
+    acceptedAnswers?: string[];
+  };
   searchTarget: {
     location: string; // A~L
     position: string; // 上, 下, 左, 右, 中,それ自身
@@ -24,6 +30,7 @@ export interface StepData {
     message: string;     // 相棒のセリフ
     questionAnswer?: {   // 相棒イベントでのクイズ回答仕様
       answer: string;        // 正解テキスト
+      acceptedAnswers?: string[];
       unlockLocation: string; // 解放される場所(A〜L)
       unlockItem: string;     // 解放されるアイテム名
       successMessage?: string; // 正解時の相棒セリフ
@@ -75,6 +82,7 @@ export const GAME_STEPS: StepData[] = [
     puzzleImage: '/images/step1-5.png',
     themeText: '足が偶数本あるもの',
     puzzleAnswer: 'かけじく',
+    acceptedPuzzleAnswers: ['掛け軸', '掛軸'],
     showBlueAnswerEffect: true,
     searchTarget: { location: 'B', position: 'それ自身', item: 'ライオンの銅像' },
     unlockedPhotos: ['I'],
@@ -107,9 +115,10 @@ export const GAME_STEPS: StepData[] = [
         message: 'これらは中身が想像つきそうだ。写真上で右のパックの中身は何か？',
         questionAnswer: {
           answer: '納豆',
+          acceptedAnswers: ['なっとう'],
           unlockLocation: 'D',
           unlockItem: '納豆',
-          successMessage: 'そうだ、納豆だ！正解したな。Cの選択肢に納豆が追加されたぞ！'
+          successMessage: 'そうだ、納豆だ！Cの選択肢に納豆が追加されたぞ！'
         }
       },
             { 
@@ -117,9 +126,10 @@ export const GAME_STEPS: StepData[] = [
         message: 'これらは中身が想像つきそうだ。写真上で真ん中のパックの中身は何か？',
         questionAnswer: {
           answer: '卵',
+          acceptedAnswers: ['たまご'],
           unlockLocation: 'D',
           unlockItem: '卵',
-          successMessage: 'そうだ、卵だ！正解したな。Cの選択肢に卵が追加されたぞ！'
+          successMessage: 'そうだ、卵だ！Cの選択肢に卵が追加されたぞ！'
         }
       }
     ],
@@ -148,6 +158,7 @@ export const GAME_STEPS: StepData[] = [
     puzzleImage: '/images/step4.png',
     themeText: 'かけるのに使うもの',
     puzzleAnswer: 'だい',
+    acceptedPuzzleAnswers: ['台'],
     showBlueAnswerEffect: true,
     searchTarget: { location: 'E', position: '上', item: '浴衣' },
     unlockedPhotos: ['H'],
@@ -158,10 +169,16 @@ export const GAME_STEPS: StepData[] = [
   },
   {
     id: 5,
-    title: 'Step 5: 「き」',
+    title: '提出場所：「き」',
     puzzleImage: '/images/step5.png',
     themeText: 'アルミ',
     puzzleAnswer: 'くも',
+    acceptedPuzzleAnswers: ['雲', '蜘蛛'],
+    followUpPuzzle: {
+      image: '/images/step5-2.png',
+      answer: '温泉饅頭',
+      acceptedAnswers: ['おんせんまんじゅう', 'オンセンマンジュウ', 'まんじゅう', '饅頭', 'マンジュウ'],
+    },
     showBlueAnswerEffect: true,
     searchTarget: { location: 'H', position: '右', item: 'アルミ缶(右)' },
     unlockedPhotos: ['I'],
@@ -174,6 +191,7 @@ export const GAME_STEPS: StepData[] = [
       { targetPhoto: 'H', displayPhotoName: '？', message: 'どこかにアルミはないか？',
         questionAnswer: {
           answer: '缶',
+          acceptedAnswers: ['かん'],
           unlockLocation: 'D',
           unlockItem: 'アルミ缶(右)',
           successMessage: 'どちらも形状も大きさも同じだが、見分けるのが得意でね...右がアルミ缶だ！！'
@@ -182,6 +200,7 @@ export const GAME_STEPS: StepData[] = [
        { targetPhoto: 'H', displayPhotoName: '？', message: 'では左は何だ？',
         questionAnswer: {
           answer: 'スチール缶',
+          acceptedAnswers: ['すちーるかん'],
           unlockLocation: 'D',
           unlockItem: 'スチール缶（左）',
           successMessage: 'ルールによると、形状も大きさも同じ場合、物の種類が変わらないと可視化されない...。似ていることを考慮すると、左がスチール缶だ！！'
@@ -191,7 +210,7 @@ export const GAME_STEPS: StepData[] = [
   },
   {
     id: 6,
-    title: 'Step 6: 「く」',
+    title: '提出場所：「く」',
     puzzleImage: '/images/step6.png',
     themeText: '尻に敷かれるもの',
     puzzleAnswer: '6',
@@ -203,17 +222,26 @@ export const GAME_STEPS: StepData[] = [
   },
   {
     id: 7,
-    title: 'Step 7: 「け」',
+    title: '提出場所：「け」',
     puzzleImage: '/images/step7.png',
     themeText: '蜘蛛',
     puzzleAnswer: '7',
     searchTarget: { location: 'J', position: '下', item: 'きつね' },
     unlockedPhotos: ['K'],
     unlockedLocationItems: {
-      K: ['暖簾']
+      K: ['暖簾', '募金箱']
     },
   },
 ];
+
+const stepKi = GAME_STEPS.find(step => step.id === 5);
+const stepKu = GAME_STEPS.find(step => step.id === 6);
+
+if (stepKi && stepKu) {
+  [stepKi.themeText, stepKu.themeText] = [stepKu.themeText, stepKi.themeText];
+  [stepKi.searchTarget, stepKu.searchTarget] = [stepKu.searchTarget, stepKi.searchTarget];
+  [stepKi.partnerEvents, stepKu.partnerEvents] = [stepKu.partnerEvents, stepKi.partnerEvents];
+}
 
 export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
   { stepIndex: 0, label: '0', originalSubmittedItem: 'キー', retryItem: 'キー' },
@@ -222,8 +250,8 @@ export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
   { stepIndex: 3, label: '2', originalSubmittedItem: '卵', retryItem: '横川' },
   { stepIndex: 4, label: '3', originalSubmittedItem: 'バスボール', retryItem: 'ピンポン玉' },
   { stepIndex: 5, label: '4', originalSubmittedItem: 'ハンガー', retryItem: 'お金' },
-  { stepIndex: 6, label: '5', originalSubmittedItem: '缶', retryItem: '1円玉' },
-  { stepIndex: 7, label: '6', originalSubmittedItem: '座布団', retryItem: '座布団' },
+  { stepIndex: 6, label: '5', originalSubmittedItem: '座布団', retryItem: '座布団' },
+  { stepIndex: 7, label: '6', originalSubmittedItem: '缶', retryItem: '1円玉' },
   { stepIndex: 8, label: '7', originalSubmittedItem: '蜘蛛', retryItem: '蜘蛛' },
 ];
 

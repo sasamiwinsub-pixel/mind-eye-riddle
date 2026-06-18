@@ -37,7 +37,31 @@ const CUT_IN_LINES = {
   stepOnePuzzleSolved: [
     { speaker: '相棒', text: '次は提出写真を確認して、見えないものを想像しよう' },
   ],
+  stepKiFirstPuzzleSolved: [
+    { speaker: '相棒', text: 'ひょっとして、今まで登場したアイテム的にこっちのが適切なんじゃない？' },
+    { speaker: '相棒', text: '～～～。今伝えた通りに謎に変化を加えたとき、読み方が変わるアイテムを答えてみて' },
+  ],
+  lastStepStart: [
+    { speaker: '相棒', text: 'やったか！？' },
+    { speaker: 'ゲームマスター', text: '残念だが、提出場所「お」が、寸前で正解から不正解判定に変わっています' },
+    { speaker: '相棒', text: '何だって！？' },
+    { speaker: 'ゲームマスター', text: '一度不正解となったため、再度全て提出し直してもらいます。ただし、別解があるお題では同じものだと不正解となります' },
+    { speaker: '相棒', text: '謎の球体が一度正解になったのに、不正解に変わった...。ひとまず「お」の場所を見に行ってみるよ' },
+    { speaker: 'ゲームマスター', text: '我々はフェアさを大事にしているので、一つだけアドバイスを差し上げましょう。「お」を確認した後は、ひとまずお題「かけるもの」を再提出してみましょう' },
+  ],
 } satisfies Record<string, CutInLine[]>;
+
+const normalizeTextAnswer = (value: string) => value
+  .normalize('NFKC')
+  .trim()
+  .toLowerCase()
+  .replace(/[\s　]+/g, '')
+  .replace(/[ァ-ヶ]/g, char => String.fromCharCode(char.charCodeAt(0) - 0x60));
+
+const matchesTextAnswer = (input: string, answers: string[]) => {
+  const normalizedInput = normalizeTextAnswer(input);
+  return answers.some(answer => normalizeTextAnswer(answer) === normalizedInput);
+};
 
 
 export default function GameInterface() {
@@ -50,7 +74,8 @@ export default function GameInterface() {
   const [searchLocation, setSearchLocation] = useState(LOCATIONS[0]);
   const [searchPosition, setSearchPosition] = useState(POSITIONS[0]);
   const [searchItem, setSearchItem] = useState('');
-  const [isFinalReviewStep, setIsFinalReviewStep] = useState(false);
+  const [isFollowUpPuzzle, setIsFollowUpPuzzle] = useState(false);
+  const [lastStep, setLastStep] = useState<0 | 1 | 2>(0);
   const [finalSubmissions, setFinalSubmissions] = useState<FinalSubmission[]>(
     LAST_STEP_SUBMISSIONS.map(submission => {
       const step = GAME_STEPS[submission.stepIndex];
@@ -112,7 +137,16 @@ export default function GameInterface() {
   
   const currentStepIndex = Math.max(GAME_STEPS.findIndex(s => s.id === currentStepId), 0);
   const currentStep = GAME_STEPS[currentStepIndex];
-  const displayTitle = isFinalReviewStep ? 'FINALSTEP' : currentStep.title;
+  const activePuzzleImage = isFollowUpPuzzle && currentStep.followUpPuzzle
+    ? currentStep.followUpPuzzle.image
+    : currentStep.puzzleImage;
+  const activePuzzleAnswer = isFollowUpPuzzle && currentStep.followUpPuzzle
+    ? currentStep.followUpPuzzle.answer
+    : currentStep.puzzleAnswer;
+  const activePuzzleAnswers = isFollowUpPuzzle && currentStep.followUpPuzzle
+    ? [currentStep.followUpPuzzle.answer, ...(currentStep.followUpPuzzle.acceptedAnswers || [])]
+    : [currentStep.puzzleAnswer, ...(currentStep.acceptedPuzzleAnswers || [])];
+  const displayTitle = lastStep > 0 ? `LASTSTEP${lastStep}` : currentStep.title;
   const reachedSteps = GAME_STEPS.slice(0, currentStepIndex + 1);
   const completedSteps = GAME_STEPS.slice(0, currentStepIndex);
   const finalSubmissionTargets = LAST_STEP_SUBMISSIONS;
@@ -245,8 +279,14 @@ export default function GameInterface() {
 
   const handlePuzzleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (puzzleInput.trim() === currentStep.puzzleAnswer) {
+    if (matchesTextAnswer(puzzleInput, activePuzzleAnswers)) {
       setErrorMsg('');
+      if (currentStep.followUpPuzzle && !isFollowUpPuzzle) {
+        setPuzzleInput('');
+        setIsFollowUpPuzzle(true);
+        showCorrectThenCutIn(CUT_IN_LINES.stepKiFirstPuzzleSolved, currentStepIndex);
+        return;
+      }
       if (currentStep.showBlueAnswerEffect) {
         // 青ハイライト演出モード：一時停止してボタン表示
         setIsPuzzleSolvedPending(true);
@@ -269,6 +309,7 @@ export default function GameInterface() {
       if (currentStepIndex < GAME_STEPS.length - 1) {
         const nextStep = GAME_STEPS[currentStepIndex + 1];
         setCurrentStepId(nextStep.id);
+        setIsFollowUpPuzzle(false);
         setPhase('puzzle');
         setIsPuzzleSolvedPending(false); // ステップ遷移時にリセット
         setIsImageCollapsed(false); // 次のステップの開始時に画像を開く
@@ -306,13 +347,14 @@ export default function GameInterface() {
           setTutorialDialog('new_memo_unlocked');
         }
       } else {
-        setIsFinalReviewStep(true);
+        setLastStep(1);
         setPhase('search');
         setIsPuzzleSolvedPending(false);
         setIsImageCollapsed(true);
         setActivePartnerMessage(null);
         setActiveTab('main');
         setErrorMsg('');
+        showCorrectThenCutIn(CUT_IN_LINES.lastStepStart, currentStepIndex);
       }
     } else {
       setErrorMsg('場所、位置、またはアイテム名が違います。');
@@ -328,6 +370,18 @@ export default function GameInterface() {
         ...(field === 'location' ? { item: '' } : {}),
       };
     }));
+  };
+
+  const handleLastStepOneSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchLocation === 'K' && searchItem === '募金箱' && searchPosition === '中') {
+      setErrorMsg('');
+      setSearchItem('');
+      setLastStep(2);
+      setShowCorrectOverlay(true);
+      return;
+    }
+    setErrorMsg('場所、位置、またはアイテム名が違います。');
   };
 
   const handleFinalSubmissionsSubmit = (e: React.FormEvent) => {
@@ -376,7 +430,7 @@ export default function GameInterface() {
           {displayTitle}
         </h1>
         <div className="text-xs bg-slate-800 px-2 py-1 rounded-full border border-slate-700">
-          {isFinalReviewStep ? 'FINAL' : `Step ${currentStepIndex} / ${GAME_STEPS.length - 1}`}
+          {lastStep > 0 ? `LAST ${lastStep} / 2` : `Step ${currentStepIndex} / ${GAME_STEPS.length - 1}`}
         </div>
       </header>
 
@@ -406,7 +460,7 @@ export default function GameInterface() {
             )}
 
             {/* Image Toggle Bar */}
-            <div 
+            {lastStep !== 1 && <div
               className="bg-slate-800 border-b border-slate-700 flex justify-between items-center px-4 py-2 cursor-pointer hover:bg-slate-700 transition-colors"
               onClick={() => setIsImageCollapsed(!isImageCollapsed)}
             >
@@ -423,16 +477,16 @@ export default function GameInterface() {
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
               </svg>
-            </div>
+            </div>}
 
             {/* Image Area */}
-            <div className={`transition-all duration-500 overflow-hidden ${isImageCollapsed ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'}`}>
+            {lastStep !== 1 && <div className={`transition-all duration-500 overflow-hidden ${isImageCollapsed ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'}`}>
               <div 
                 className="relative w-full aspect-4/3 bg-black flex items-center justify-center border-b border-slate-800 shadow-lg cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => setZoomedImage(currentStep.puzzleImage)}
+                onClick={() => setZoomedImage(activePuzzleImage)}
               >
                 <Image 
-                  src={currentStep.puzzleImage} 
+                  src={activePuzzleImage}
                   alt="謎画像" 
                   fill 
                   className="object-contain"
@@ -444,14 +498,22 @@ export default function GameInterface() {
                   </svg>
                 </div>
               </div>
-            </div>
+            </div>}
+
+            {isFollowUpPuzzle && currentStep.followUpPuzzle && (
+              <div className="border-b border-emerald-500/30 bg-emerald-950/40 px-4 py-3">
+                <p className="text-sm font-bold leading-relaxed text-emerald-100">
+                  緑が追加してみた部分だけど、追加したことで読み方が変わるものは何？
+                </p>
+              </div>
+            )}
             
             {/* Theme Area */}
             <div className="p-4 flex-1 flex flex-col">
-              {phase === 'search' && (
+              {phase === 'search' && lastStep !== 2 && (
                 <div className="glass rounded-xl p-4 mb-4 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)] animate-in fade-in slide-in-from-top-2 duration-300">
                   <h2 className="text-blue-400 text-sm font-semibold mb-1">現在のお題</h2>
-                  <p className="text-lg text-slate-100">{currentStep.themeText}</p>
+                  <p className="text-lg text-slate-100">{lastStep === 1 ? 'かけるもの' : currentStep.themeText}</p>
                 </div>
               )}
 
@@ -470,7 +532,7 @@ export default function GameInterface() {
                       <label className="text-sm text-blue-400 font-semibold">✓ 正解！</label>
                       <input
                         type="text"
-                        value={currentStep.puzzleAnswer}
+                        value={activePuzzleAnswer}
                         disabled
                         className="bg-blue-950/60 border-2 border-blue-400 rounded-lg p-3 text-blue-300 font-bold text-center tracking-widest cursor-not-allowed shadow-[0_0_12px_rgba(59,130,246,0.4)] transition-all"
                       />
@@ -503,7 +565,60 @@ export default function GameInterface() {
                     </button>
                   </form>
                   )
-                ) : isFinalReviewStep ? (
+                ) : lastStep === 1 ? (
+                  <form onSubmit={handleLastStepOneSubmit} className="flex flex-col gap-3">
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-950/30 p-3">
+                      <h3 className="text-sm font-bold text-amber-300">「かけるもの」を再提出</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-300">
+                        場所・アイテム・位置を選択して、まず一つ提出してください。
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="block">
+                        <span className="mb-1 block text-xs text-slate-400">場所</span>
+                        <select
+                          value={searchLocation}
+                          onChange={(e) => {
+                            setSearchLocation(e.target.value);
+                            setSearchItem('');
+                          }}
+                          className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3 text-white focus:border-amber-500 focus:outline-none"
+                        >
+                          {LOCATIONS.map(location => <option key={location} value={location}>{location}</option>)}
+                        </select>
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-xs text-slate-400">アイテム</span>
+                        <select
+                          value={searchItem}
+                          onChange={(e) => setSearchItem(e.target.value)}
+                          className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3 text-white focus:border-amber-500 focus:outline-none"
+                        >
+                          <option value="">選択してください</option>
+                          {getAvailableItemsForLocation(searchLocation).map(item => (
+                            <option key={item} value={item}>{item}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <label className="block">
+                      <span className="mb-1 block text-xs text-slate-400">位置</span>
+                      <select
+                        value={searchPosition}
+                        onChange={(e) => setSearchPosition(e.target.value)}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3 text-white focus:border-amber-500 focus:outline-none"
+                      >
+                        {POSITIONS.map(position => <option key={position} value={position}>{position}</option>)}
+                      </select>
+                    </label>
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 py-3 font-bold text-white shadow-lg transition-all hover:from-amber-500 hover:to-orange-500 active:scale-95"
+                    >
+                      再提出する
+                    </button>
+                  </form>
+                ) : lastStep === 2 ? (
                   <form onSubmit={handleFinalSubmissionsSubmit} className="flex flex-col gap-3">
                     <div className="rounded-xl border border-rose-500/30 bg-rose-950/30 p-3 shadow-[0_0_18px_rgba(244,63,94,0.12)]">
                       <h3 className="text-sm font-bold text-rose-300">最終提出</h3>
@@ -770,7 +885,10 @@ export default function GameInterface() {
                         />
                         <button
                           onClick={() => {
-                            if (partnerAnswerInput.trim() === activeEvent.questionAnswer!.answer) {
+                            if (matchesTextAnswer(partnerAnswerInput, [
+                              activeEvent.questionAnswer!.answer,
+                              ...(activeEvent.questionAnswer!.acceptedAnswers || []),
+                            ])) {
                               setSolvedPartnerQuestions(prev => [...prev, qKey]);
                               setPartnerAnswerError('');
                               alert(`正解！アイテム「${activeEvent.questionAnswer!.unlockItem}」が ${activeEvent.questionAnswer!.unlockLocation} の選択肢に追加されました！`);
