@@ -45,13 +45,13 @@ const CUT_IN_LINES = {
     { speaker: '相棒', text: 'あと一つ提出するだけだ！' },
     { speaker: 'ゲームマスター', text: '残念ですが、提出場所「お」が、たった今正解から不正解判定に変わりました' },
     { speaker: '相棒', text: '何だって！？謎の球体が一度正解になったのに、不正解に変わったの...か？ひとまず「お」の場所を見に行ってみるよ' },
-    { speaker: 'ゲームマスター', text: '一度不正解となったため、全てを再提出してもらいます。ただし、別解があるお題では同じものだと不正解となります。それに伴い、新たな機能もとい制約が解放されました' },
-    { speaker: 'ゲームマスター', text: '転送対象の名称まで指定することができるようになりました。名称を指定した場合、同時に複数個転送することもできます' },
-    { speaker: 'ゲームマスター', text: '我々はフェアさを大事にしているので、一つだけアドバイスを差し上げましょう。「お」を確認した後は、ひとまずお題「かけるもの」を再提出してみましょう' },
+    { speaker: 'ゲームマスター', text: '一度不正解となったため、全てを再提出してもらいます。ただし、別解があるお題では別解での回答してください。さらに、新たな制約が追加されました' },
+    { speaker: 'ゲームマスター', text: 'その制約とは、転送対象の名称の指定の必須化。名称を指定した場合、該当するものが同時に複数個転送されます' },
+    { speaker: 'ゲームマスター', text: '我々はフェアさを大事にしているので、一つだけアドバイスを差し上げましょう。「お」を確認した後は、ひとまずお題「アルミ」を再提出してみましょう' },
   ],
   lastStepTwoStart: [
     { speaker: '相棒', text: 'まさか募金箱のお金を移動させるなんて...。立山君はこういう時に頼もしいけど、友人の横山としては倫理観が心配だね' },
-    { speaker: 'ゲームマスター', text: 'ご安心ください。元々空の募金箱に6枚の硬貨、114円を事前に募金をしておきました。窃盗には当たらないのでご安心を' },
+    { speaker: 'ゲームマスター', text: 'ご安心ください。元々空の募金箱に2枚の硬貨、11円を事前に募金をしておきました。窃盗には当たらないのでご安心を' },
     { speaker: '相棒', text: 'なら、大丈夫か。あ、君に負けじと一つやってみたいことをしても良いかい？' },
     { speaker: '相棒', text: '実は提出時以外で一度だけ転送をさせる権利が僕に与えられていたんだけど、その権利をここで行使したい' },
     { speaker: '相棒', text: '僕の予想だと提出場所のどこかが温泉だと思うのだけど、温泉だと思う場所に一度球体として提出したものを転送してみたいんだ' },
@@ -405,7 +405,7 @@ export default function GameInterface() {
       searchLocation === 'K'
       && searchItem === '募金箱'
       && searchPosition === '中'
-      && matchesTextAnswer(lastStepOneName, ['お金'])
+      && matchesTextAnswer(lastStepOneName, ['1円玉'])
     ) {
       setErrorMsg('');
       setSearchItem('');
@@ -559,7 +559,7 @@ export default function GameInterface() {
               {phase === 'search' && (lastStep === 0 || lastStep === 1) && (
                 <div className="glass rounded-xl p-4 mb-4 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)] animate-in fade-in slide-in-from-top-2 duration-300">
                   <h2 className="text-blue-400 text-sm font-semibold mb-1">現在のお題</h2>
-                  <p className="text-lg text-slate-100">{lastStep === 1 ? 'かけるもの' : currentStep.themeText}</p>
+                  <p className="text-lg text-slate-100">{lastStep === 1 ? 'アルミ' : currentStep.themeText}</p>
                 </div>
               )}
 
@@ -614,7 +614,7 @@ export default function GameInterface() {
                 ) : lastStep === 1 ? (
                   <form onSubmit={handleLastStepOneSubmit} className="flex flex-col gap-3">
                     <div className="rounded-xl border border-amber-500/30 bg-amber-950/30 p-3">
-                      <h3 className="text-sm font-bold text-amber-300">「かけるもの」を再提出</h3>
+                      <h3 className="text-sm font-bold text-amber-300">「アルミ」を再提出</h3>
                       <p className="mt-1 text-xs leading-relaxed text-slate-300">
                         場所・アイテム・位置を選択し、転送対象の名称も指定してください。
                       </p>

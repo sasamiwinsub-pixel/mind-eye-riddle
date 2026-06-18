@@ -107,7 +107,7 @@ export const GAME_STEPS: StepData[] = [
     unlockedPhotosAtTheme: ['D','E','F'],
     unlockedLocationItems: {
       D: ['紙パック'],
-      E: ['個包装のパック'],
+      E: ['パック'],
       F: ['短い個包装パック（左）', '長い個包装パック（右）']
     },
     partnerEvents: [
@@ -149,9 +149,6 @@ export const GAME_STEPS: StepData[] = [
       G: ['浴衣'],
       F: ['ドライヤー', 'ハブラシ', 'カミソリ']
     },
-    partnerEvents: [
-      { targetPhoto: 'E', displayPhotoName: '？', message: '球体のような形のものがないだろうか？' }
-    ],
   },
   {
     id: 4,
@@ -161,11 +158,16 @@ export const GAME_STEPS: StepData[] = [
     puzzleAnswer: 'だい',
     acceptedPuzzleAnswers: ['台'],
     showBlueAnswerEffect: true,
-    searchTarget: { location: 'E', position: '上', item: '浴衣' },
+    searchTarget: { location: 'G', position: '上', item: '浴衣' },
     unlockedPhotos: ['H'],
     updatedPhotosAtTheme: {'A': 'A4', 'F': 'F3', 'I': 'I2' }, 
+    unlockedPhotosAtTheme: ['K'],
     unlockedLocationItems: {
-      H: ['酒瓶','焼酎']
+      A: ['机'],
+      I: ['卓球台'],
+      K: ['カウンター'],
+      F: ['洗面台'],
+      H: ['酒瓶']
     },
   },
   {
@@ -181,8 +183,8 @@ export const GAME_STEPS: StepData[] = [
       acceptedAnswers: ['おんせんまんじゅう', 'オンセンマンジュウ', 'まんじゅう', '饅頭', 'マンジュウ'],
     },
     showBlueAnswerEffect: true,
-    searchTarget: { location: 'H', position: '右', item: 'アルミ缶(右)' },
-    unlockedPhotos: ['I'],
+    searchTarget: { location: 'H', position: '右', item: '酒瓶' },
+    unlockedPhotos: [],
     updatedPhotosAtPuzzle: {'A': 'A6', 'H': 'H2' },
     unlockedLocationItems: {
       A: ['墨汁', '饅頭', '盆', '扇子', 'イス'],
@@ -197,15 +199,6 @@ export const GAME_STEPS: StepData[] = [
           unlockItem: 'アルミ缶(右)',
           successMessage: 'どちらも形状も大きさも同じだが、見分けるのが得意でね...右がアルミ缶だ！！'
         },
-       },
-       { targetPhoto: 'H', displayPhotoName: '？', message: 'では左は何だ？',
-        questionAnswer: {
-          answer: 'スチール缶',
-          acceptedAnswers: ['すちーるかん', 'スチール缶', 'すちーるかん'],
-          unlockLocation: 'D',
-          unlockItem: 'スチール缶（左）',
-          successMessage: 'ルールによると、形状も大きさも同じ場合、物の種類が変わらないと可視化されない...。似ていることを考慮すると、左がスチール缶だ！！'
-        },
        }
     ],
   },
@@ -214,9 +207,13 @@ export const GAME_STEPS: StepData[] = [
     title: '提出場所：「く」',
     puzzleImage: '/images/step6.png',
     themeText: '尻に敷かれるもの',
-    puzzleAnswer: '6',
+    puzzleAnswer: 'ホログラム',
+    showBlueAnswerEffect: true,
+    unlockedPhotosAtTheme: [],
+    acceptedPuzzleAnswers: ['ほろぐらむ', 'hologram'],
     searchTarget: { location: 'A', position: '上', item: 'イス' },
     unlockedPhotos: ['J'],
+     updatedPhotosAtTheme: {'K': 'K2' },
     unlockedLocationItems: {
       J: ['体重計']
     },
@@ -226,9 +223,10 @@ export const GAME_STEPS: StepData[] = [
     title: '提出場所：「け」',
     puzzleImage: '/images/step7.png',
     themeText: '蜘蛛',
-    puzzleAnswer: '7',
+    puzzleAnswer: 'かんち',
+    acceptedPuzzleAnswers: ['完治', 'カンチ'],
     searchTarget: { location: 'J', position: '下', item: 'きつね' },
-    unlockedPhotos: ['K'],
+    unlockedPhotos: ['L'],
     unlockedLocationItems: {
       K: ['暖簾', '募金箱']
     },
@@ -241,7 +239,7 @@ export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
   { stepIndex: 2, label: '1-5', originalSubmittedItem: 'ライオンの銅像', retryItem: '机' },
   { stepIndex: 3, label: '2', originalSubmittedItem: '卵', retryItem: '横川' },
   { stepIndex: 4, label: '3', originalSubmittedItem: 'バスボール', retryItem: 'ピンポン玉' },
-  { stepIndex: 5, label: '4', originalSubmittedItem: 'ハンガー', retryItem: 'お金' },
+  { stepIndex: 5, label: '4', originalSubmittedItem: 'ハンガー', retryItem: '10円玉' },
   { stepIndex: 6, label: '5', originalSubmittedItem: '缶', retryItem: '1円玉' },
   { stepIndex: 7, label: '6', originalSubmittedItem: '座布団', retryItem: '座布団' },
   { stepIndex: 8, label: '7', originalSubmittedItem: '蜘蛛', retryItem: '蜘蛛', isPending: true },
