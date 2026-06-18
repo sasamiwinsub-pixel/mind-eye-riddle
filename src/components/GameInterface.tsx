@@ -42,12 +42,23 @@ const CUT_IN_LINES = {
     { speaker: '相棒', text: '～～～。今伝えた通りに謎に変化を加えたとき、読み方が変わるアイテムを答えてみて' },
   ],
   lastStepStart: [
-    { speaker: '相棒', text: 'やったか！？' },
-    { speaker: 'ゲームマスター', text: '残念だが、提出場所「お」が、寸前で正解から不正解判定に変わっています' },
-    { speaker: '相棒', text: '何だって！？' },
-    { speaker: 'ゲームマスター', text: '一度不正解となったため、再度全て提出し直してもらいます。ただし、別解があるお題では同じものだと不正解となります' },
-    { speaker: '相棒', text: '謎の球体が一度正解になったのに、不正解に変わった...。ひとまず「お」の場所を見に行ってみるよ' },
+    { speaker: '相棒', text: 'あと一つ提出するだけだ！' },
+    { speaker: 'ゲームマスター', text: '残念ですが、提出場所「お」が、たった今正解から不正解判定に変わりました' },
+    { speaker: '相棒', text: '何だって！？謎の球体が一度正解になったのに、不正解に変わったの...か？ひとまず「お」の場所を見に行ってみるよ' },
+    { speaker: 'ゲームマスター', text: '一度不正解となったため、全てを再提出してもらいます。ただし、別解があるお題では同じものだと不正解となります。それに伴い、新たな機能が解放されました' },
+    { speaker: 'ゲームマスター', text: '転送対象の名称まで指定することができるようになりました。名称を指定した場合、同時に複数個転送することもできます' },
     { speaker: 'ゲームマスター', text: '我々はフェアさを大事にしているので、一つだけアドバイスを差し上げましょう。「お」を確認した後は、ひとまずお題「かけるもの」を再提出してみましょう' },
+  ],
+  lastStepTwoStart: [
+    { speaker: '相棒', text: 'まさか募金箱のお金を移動させるなんて...。立山君はこういう時に頼もしいけど、友人の横山としては倫理観が心配だね' },
+    { speaker: '相棒', text: 'あ、君に負けじと一つやってみたいことをしても良いかい？' },
+    { speaker: '相棒', text: '実は提出時以外で一度だけ転送をさせる権利が僕に与えられていたんだけど、その権利をここで行使したい' },
+    { speaker: '相棒', text: '僕の予想だと提出場所のどこかが温泉だと思うのだけど、温泉だと思う場所に一度球体として提出したものを転送してみたいんだ' },
+  ],
+  lastStepThreeStart: [
+    { speaker: '相棒', text: '温泉に転送してみたけど、すぐに木のフィギュアが出てきたね' },
+    { speaker: '相棒', text: 'どうやらEにある謎の球体、水や温度に反応して球体が消えていくようだ。徐々にフィギュアが見えてきたので間違いない' },
+    { speaker: '相棒', text: '一見すると蜘蛛を直接名称指定すれば解決しそうだけど、入れ子構造の中身は直接取り出せないルールだ。球体の名称は一体何だろう' },
   ],
 } satisfies Record<string, CutInLine[]>;
 
@@ -75,14 +86,15 @@ export default function GameInterface() {
   const [searchPosition, setSearchPosition] = useState(POSITIONS[0]);
   const [searchItem, setSearchItem] = useState('');
   const [isFollowUpPuzzle, setIsFollowUpPuzzle] = useState(false);
-  const [lastStep, setLastStep] = useState<0 | 1 | 2>(0);
+  const [lastStep, setLastStep] = useState<0 | 1 | 2 | 3>(0);
+  const [hotSpringAnswer, setHotSpringAnswer] = useState('');
   const [finalSubmissions, setFinalSubmissions] = useState<FinalSubmission[]>(
     LAST_STEP_SUBMISSIONS.map(submission => {
       const step = GAME_STEPS[submission.stepIndex];
       return {
         location: step.searchTarget.location,
         position: step.searchTarget.position,
-        item: submission.originalSubmittedItem === submission.retryItem ? submission.retryItem : '',
+        item: !submission.isPending && submission.originalSubmittedItem === submission.retryItem ? submission.retryItem : '',
       };
     })
   );
@@ -206,6 +218,20 @@ export default function GameInterface() {
     setShowCorrectOverlay(true);
   };
 
+  const startLastStep = () => {
+    setLastStep(1);
+    setPhase('search');
+    setIsPuzzleSolvedPending(false);
+    setIsImageCollapsed(true);
+    setUnlockedPhotos(prev => Array.from(new Set([...prev, 'お'])));
+    setPhotoFiles(prev => ({ ...prev, お: 'お' }));
+    setNewPhotos(['お']);
+    setActivePartnerMessage(null);
+    setActiveTab('main');
+    setErrorMsg('');
+    showCorrectThenCutIn(CUT_IN_LINES.lastStepStart, currentStepIndex);
+  };
+
   const closeCorrectOverlay = () => {
     setShowCorrectOverlay(false);
     if (pendingCutIn) {
@@ -269,6 +295,11 @@ export default function GameInterface() {
     });
 
     setNewPhotos([...newlyUnlocked, ...newlyUnlockedAtTheme, ...newlyUpdated]);
+
+    if (currentStepIndex === GAME_STEPS.length - 1) {
+      startLastStep();
+      return;
+    }
 
     // チュートリアルの場合、検索のヒントダイアログを表示
     if (currentStepId === 0 && !showedSearchTutorialDialog) {
@@ -347,14 +378,7 @@ export default function GameInterface() {
           setTutorialDialog('new_memo_unlocked');
         }
       } else {
-        setLastStep(1);
-        setPhase('search');
-        setIsPuzzleSolvedPending(false);
-        setIsImageCollapsed(true);
-        setActivePartnerMessage(null);
-        setActiveTab('main');
-        setErrorMsg('');
-        showCorrectThenCutIn(CUT_IN_LINES.lastStepStart, currentStepIndex);
+        startLastStep();
       }
     } else {
       setErrorMsg('場所、位置、またはアイテム名が違います。');
@@ -378,17 +402,32 @@ export default function GameInterface() {
       setErrorMsg('');
       setSearchItem('');
       setLastStep(2);
-      setShowCorrectOverlay(true);
+      showCorrectThenCutIn(CUT_IN_LINES.lastStepTwoStart, currentStepIndex);
       return;
     }
     setErrorMsg('場所、位置、またはアイテム名が違います。');
+  };
+
+  const handleLastStepTwoSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (matchesTextAnswer(hotSpringAnswer, ['き'])) {
+      setErrorMsg('');
+      setHotSpringAnswer('');
+      setLastStep(3);
+      setUnlockedPhotos(prev => Array.from(new Set([...prev, 'き'])));
+      setPhotoFiles(prev => ({ ...prev, き: 'き' }));
+      setNewPhotos(['き']);
+      showCorrectThenCutIn(CUT_IN_LINES.lastStepThreeStart, currentStepIndex);
+      return;
+    }
+    setErrorMsg('温泉だと思う提出場所が違います。');
   };
 
   const handleFinalSubmissionsSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const allCorrect = finalSubmissionTargets.every((target, index) => {
       const originalStep = GAME_STEPS[target.stepIndex];
-      if (target.originalSubmittedItem === target.retryItem) {
+      if (!target.isPending && target.originalSubmittedItem === target.retryItem) {
         return true;
       }
       const submission = finalSubmissions[index];
@@ -430,7 +469,7 @@ export default function GameInterface() {
           {displayTitle}
         </h1>
         <div className="text-xs bg-slate-800 px-2 py-1 rounded-full border border-slate-700">
-          {lastStep > 0 ? `LAST ${lastStep} / 2` : `Step ${currentStepIndex} / ${GAME_STEPS.length - 1}`}
+          {lastStep > 0 ? `LAST ${lastStep} / 3` : `Step ${currentStepIndex} / ${GAME_STEPS.length - 1}`}
         </div>
       </header>
 
@@ -460,7 +499,7 @@ export default function GameInterface() {
             )}
 
             {/* Image Toggle Bar */}
-            {lastStep !== 1 && <div
+            {(lastStep === 0 || lastStep === 3) && <div
               className="bg-slate-800 border-b border-slate-700 flex justify-between items-center px-4 py-2 cursor-pointer hover:bg-slate-700 transition-colors"
               onClick={() => setIsImageCollapsed(!isImageCollapsed)}
             >
@@ -480,7 +519,7 @@ export default function GameInterface() {
             </div>}
 
             {/* Image Area */}
-            {lastStep !== 1 && <div className={`transition-all duration-500 overflow-hidden ${isImageCollapsed ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'}`}>
+            {(lastStep === 0 || lastStep === 3) && <div className={`transition-all duration-500 overflow-hidden ${isImageCollapsed ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'}`}>
               <div 
                 className="relative w-full aspect-4/3 bg-black flex items-center justify-center border-b border-slate-800 shadow-lg cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={() => setZoomedImage(activePuzzleImage)}
@@ -510,7 +549,7 @@ export default function GameInterface() {
             
             {/* Theme Area */}
             <div className="p-4 flex-1 flex flex-col">
-              {phase === 'search' && lastStep !== 2 && (
+              {phase === 'search' && (lastStep === 0 || lastStep === 1) && (
                 <div className="glass rounded-xl p-4 mb-4 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)] animate-in fade-in slide-in-from-top-2 duration-300">
                   <h2 className="text-blue-400 text-sm font-semibold mb-1">現在のお題</h2>
                   <p className="text-lg text-slate-100">{lastStep === 1 ? 'かけるもの' : currentStep.themeText}</p>
@@ -619,6 +658,31 @@ export default function GameInterface() {
                     </button>
                   </form>
                 ) : lastStep === 2 ? (
+                  <form onSubmit={handleLastStepTwoSubmit} className="flex flex-col gap-3">
+                    <div className="rounded-xl border border-cyan-500/30 bg-cyan-950/30 p-4 shadow-[0_0_18px_rgba(6,182,212,0.12)]">
+                      <h3 className="text-sm font-bold text-cyan-300">どこが温泉か？</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-300">
+                        温泉だと思う提出場所を答えてください。
+                      </p>
+                    </div>
+                    <label className="block">
+                      <span className="mb-1 block text-xs text-slate-400">提出場所</span>
+                      <input
+                        type="text"
+                        value={hotSpringAnswer}
+                        onChange={(e) => setHotSpringAnswer(e.target.value)}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3 text-center text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                        placeholder="ひらがなで回答"
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 py-3 font-bold text-white shadow-lg transition-all hover:from-cyan-500 hover:to-blue-500 active:scale-95"
+                    >
+                      回答する
+                    </button>
+                  </form>
+                ) : lastStep === 3 ? (
                   <form onSubmit={handleFinalSubmissionsSubmit} className="flex flex-col gap-3">
                     <div className="rounded-xl border border-rose-500/30 bg-rose-950/30 p-3 shadow-[0_0_18px_rgba(244,63,94,0.12)]">
                       <h3 className="text-sm font-bold text-rose-300">最終提出</h3>
@@ -630,7 +694,7 @@ export default function GameInterface() {
                     <div className="max-h-[42vh] space-y-3 overflow-y-auto pr-1 no-scrollbar">
                       {finalSubmissionTargets.map((target, index) => {
                         const originalStep = GAME_STEPS[target.stepIndex];
-                        const isSameAsOriginal = target.originalSubmittedItem === target.retryItem;
+                        const isSameAsOriginal = !target.isPending && target.originalSubmittedItem === target.retryItem;
                         const submission = isSameAsOriginal
                           ? {
                               location: originalStep.searchTarget.location,
@@ -651,7 +715,11 @@ export default function GameInterface() {
                               </span>
                             </div>
                             <div className="mb-2 rounded-lg border border-slate-700 bg-slate-900/70 px-2 py-1.5 text-[11px] leading-relaxed text-slate-300">
-                              ログで見えないが提出したもの：<span className="font-bold text-slate-100">{target.originalSubmittedItem}</span>
+                              {target.isPending ? (
+                                <>今回あわせて回答するお題：<span className="font-bold text-slate-100">蜘蛛</span></>
+                              ) : (
+                                <>ログで見えないが提出したもの：<span className="font-bold text-slate-100">{target.originalSubmittedItem}</span></>
+                              )}
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">
@@ -1219,21 +1287,6 @@ export default function GameInterface() {
                 </button>
               </>
             )}
-            {tutorialDialog === 'start_puzzle' && (
-              <>
-                <div className="mb-4">
-                  <p className="text-slate-100 text-base leading-relaxed">
-                    それではメインタブの謎を解こう！
-                  </p>
-                </div>
-                <button
-                  onClick={() => setTutorialDialog(null)}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-2 rounded-lg hover:from-blue-500 hover:to-indigo-500 active:scale-95 transition-all"
-                >
-                  OK
-                </button>
-              </>
-            )}
             {tutorialDialog === 'new_memo_unlocked' && (
               <>
                 <div className="mb-4">
@@ -1279,21 +1332,23 @@ export default function GameInterface() {
             <div className="space-y-5 text-sm leading-relaxed">
               <section>
                 <h3 className="mb-2 font-bold text-emerald-300">クリア条件</h3>
-                <p>マップ上の「あ」〜「け」の全ての場所に対して、お題のアイテムを提出すること。</p>
-                <p className="mt-2 text-slate-300">※謎のイラスト内に登場したアイテムしか視認できない。</p>
+                <p>マップ上の「あ」〜「け」の全ての場所に対して、お題のアイテムを提出すること</p>
+                <p className="mt-2 text-slate-300">※謎のイラスト内に登場したアイテムしか視認できない</p>
               </section>
 
               <section>
                 <h3 className="mb-2 font-bold text-amber-300">アイテム提出方法</h3>
                 <ol className="list-decimal space-y-1 pl-5">
                   <li>各場所の謎に正解するとお題が出題される</li>
-                  <li>お題に沿ったアイテムの場所を特定すると、提出場所へ自動でワープする。</li>
+                  <li>お題に沿ったアイテムの場所を特定すると、提出場所へ自動で転送される</li>
                 </ol>
               </section>
 
               <section>
                 <h3 className="mb-2 font-bold text-indigo-300">視認できないアイテムを提出するには？</h3>
-                <p>視認できているアイテムを基準に、写真上でどの位置にあるかを特定すると、最も近いアイテムが一つ提出される</p>
+                <p>視認できているアイテムを基準に、写真上でどの位置にあるかを特定すると、最も近いアイテムが一つだけ提出される</p>
+                <p className="mt-2 text-slate-300">※位置の基準に選んだアイテムは転送できない</p>
+                <p className="mt-2 text-slate-300">※入れ子構造の中身だけを直接取り出せないが、対象となったアイテムの中身全てが転送される</p>
               </section>
             </div>
           </div>
