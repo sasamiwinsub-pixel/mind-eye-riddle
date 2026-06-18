@@ -986,7 +986,6 @@ export default function GameInterface() {
                             ])) {
                               setSolvedPartnerQuestions(prev => [...prev, qKey]);
                               setPartnerAnswerError('');
-                              alert(`正解！アイテム「${activeEvent.questionAnswer!.unlockItem}」が ${activeEvent.questionAnswer!.unlockLocation} の選択肢に追加されました！`);
                             } else {
                               setPartnerAnswerError('答えが違います。');
                             }

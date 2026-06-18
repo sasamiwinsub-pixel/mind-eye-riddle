@@ -74,7 +74,7 @@ export const GAME_STEPS: StepData[] = [
     },
     partnerEvents: [
       { targetPhoto: 'B', message: '可視化されて分かったが、どうやら僕はこのライオンの銅像に姿を変えられてしまったらしい。そりゃ動けないわけだ。' },
-      { targetPhoto: 'C', message: 'この穴の大きさに４本ぐらい、最も一般的なサイズじゃないか？' }
+      { targetPhoto: 'C', message: '動いている時計だ。この穴の大きさに４本ぐらい、最も一般的なサイズじゃないか？' }
     ],
   },
   {
@@ -85,7 +85,7 @@ export const GAME_STEPS: StepData[] = [
     puzzleAnswer: 'かけじく',
     acceptedPuzzleAnswers: ['掛け軸', '掛軸'],
     showBlueAnswerEffect: true,
-    searchTarget: { location: 'B', position: 'それ自身', item: 'ライオンの銅像' },
+    searchTarget: { location: 'B', position: '下', item: '時計' },
     unlockedPhotos: ['I'],
     updatedPhotosAtTheme: {'A': 'A2'}, // ステップ1-5のお題が出たタイミングで、写真AをA3に差し替える
     unlockedLocationItems: {
@@ -248,4 +248,4 @@ export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
 ];
 
 export const LOCATIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
-export const POSITIONS = ['中','上', '下', '左', '右', 'それ自身'];
+export const POSITIONS = ['中','上', '下', '左', '右'];
