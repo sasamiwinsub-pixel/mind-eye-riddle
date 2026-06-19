@@ -27,10 +27,12 @@ export interface StepData {
   partnerEvents?: {
     targetPhoto: string; // どの写真に会話ボタンを出すか
     displayPhotoName?: string; // 会話ボタンに表示する名前（省略時はtargetPhotoと同じ）
+    availableAfterPuzzleSolved?: boolean; // このステップの謎に正解した後から会話可能にする
     message: string;     // 相棒のセリフ
     questionAnswer?: {   // 相棒イベントでのクイズ回答仕様
       answer: string;        // 正解テキスト
       acceptedAnswers?: string[];
+      choices?: string[];    // 指定時は自由入力ではなく選択式にする
       unlockLocation: string; // 解放される場所(A〜L)
       unlockItem: string;     // 解放されるアイテム名
       successMessage?: string; // 正解時の相棒セリフ
@@ -84,7 +86,6 @@ export const GAME_STEPS: StepData[] = [
     themeText: '足が偶数本あるもの',
     puzzleAnswer: 'かけじく',
     acceptedPuzzleAnswers: ['掛け軸', '掛軸'],
-    showBlueAnswerEffect: true,
     searchTarget: { location: 'B', position: '下', item: '時計' },
     unlockedPhotos: ['I'],
     updatedPhotosAtTheme: {'A': 'A2'}, // ステップ1-5のお題が出たタイミングで、写真AをA3に差し替える
@@ -92,7 +93,7 @@ export const GAME_STEPS: StepData[] = [
       'I': ['ラケット'],
       'A': ['掛け軸']
     },
-    memos: ['ルール２：相棒はライオンの銅像に姿が変わっている','ルール3：青くなった謎の回答は、イラストに出ていなくても可視化される'],
+    memos: ['ルール2：相棒はライオンの銅像に姿が変わっている'],
 
   },
   {
@@ -102,7 +103,7 @@ export const GAME_STEPS: StepData[] = [
     themeText: '漢字表示で黄を含むもの',
     puzzleAnswer: 'ぱっく',
     showBlueAnswerEffect: true,
-    searchTarget: { location: 'D', position: '中', item: '卵' },
+    searchTarget: { location: 'D', position: '中', item: '卵のパック' },
     unlockedPhotos: [],
     unlockedPhotosAtTheme: ['D','E','F'],
     unlockedLocationItems: {
@@ -113,23 +114,25 @@ export const GAME_STEPS: StepData[] = [
     partnerEvents: [
       { 
         targetPhoto: 'D', 
+        availableAfterPuzzleSolved: true,
         message: 'これらは中身が想像つきそうだ。写真上で右のパックの中身は何か？',
         questionAnswer: {
           answer: '納豆',
           acceptedAnswers: ['なっとう'],
           unlockLocation: 'D',
-          unlockItem: '納豆',
-          successMessage: 'そうだ、納豆だ！Cの選択肢に納豆が追加されたぞ！'
+          unlockItem: '納豆のパック',
+          successMessage: 'そうだ、納豆だ！Cの選択肢に納豆のパックが追加されたぞ！'
         }
       },
-            { 
+      { 
         targetPhoto: 'D', 
+        availableAfterPuzzleSolved: true,
         message: 'これらは中身が想像つきそうだ。写真上で真ん中のパックの中身は何か？',
         questionAnswer: {
           answer: '卵',
           acceptedAnswers: ['たまご'],
           unlockLocation: 'D',
-          unlockItem: '卵',
+          unlockItem: '卵のパック',
           successMessage: 'そうだ、卵だ！Cの選択肢に卵が追加されたぞ！'
         }
       }
@@ -192,9 +195,10 @@ export const GAME_STEPS: StepData[] = [
     },
     partnerEvents: [
       { targetPhoto: 'H', displayPhotoName: '？', message: 'どこかにアルミの可能性があるものはないか？',
+        availableAfterPuzzleSolved: true,
         questionAnswer: {
-          answer: '缶',
-          acceptedAnswers: ['かん', 'カン', 'アルミ缶', 'あるみかん', 'アルミカン', 'アルミかん'],
+          answer: 'H',
+          choices: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K'],
           unlockLocation: 'D',
           unlockItem: 'アルミ缶(右)',
           successMessage: 'どちらも形状も大きさも同じだが、見分けるのが得意でね...右がアルミ缶だ！！'

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { GAME_STEPS, LAST_STEP_SUBMISSIONS, LOCATIONS, POSITIONS } from '@/constants/gameData';
 
@@ -36,6 +36,18 @@ const CUT_IN_LINES = {
   ],
   stepOnePuzzleSolved: [
     { speaker: '相棒', text: '次は提出写真を確認して、見えないものを想像しよう' },
+  ],
+  stepUSearchSolved: [
+    { speaker: '相棒', text: '直接ライオンの銅像って提出はできないんだね' },
+  ],
+  stepEPuzzleSolved: [
+    { speaker: 'ゲームマスター', text: '追加情報です。謎の回答が青くなった場合、イラストに登場していなくても可視化できる状態となったことを示します。なお、青くなる条件はゲームフィールドに存在していることです' },
+  ],
+  stepESearchSolved: [
+    { speaker: '相棒', text: '卵ごと提出しても、中に正解のアイテムを含んでいれば判定されるってことだね' },
+  ],
+  stepESearchHint: [
+    { speaker: '相棒', text: 'Eのパックの中身が球体っぽいね。中身は良くわからないけどこれしかなさそう' },
   ],
   stepKiFirstPuzzleSolved: [
     { speaker: '相棒', text: 'ひょっとして、今まで登場したアイテム的にこっちのが適切なんじゃない？' },
@@ -106,7 +118,10 @@ export default function GameInterface() {
   const [showCorrectOverlay, setShowCorrectOverlay] = useState(false);
   const [showRulesInfo, setShowRulesInfo] = useState(false);
   const [isRulesInfoUnlocked, setIsRulesInfoUnlocked] = useState(false);
+  const [isAdditionalRuleUnlocked, setIsAdditionalRuleUnlocked] = useState(false);
   const [showRulesInfoPrompt, setShowRulesInfoPrompt] = useState(false);
+  const [hasShownStepESearchHint, setHasShownStepESearchHint] = useState(false);
+  const [isStepESearchSolved, setIsStepESearchSolved] = useState(false);
   const [tabGuideStep, setTabGuideStep] = useState<'photos' | 'photoA' | 'map' | null>(null);
   const [hasStartedTabGuide, setHasStartedTabGuide] = useState(false);
 
@@ -165,6 +180,27 @@ export default function GameInterface() {
   const reachedSteps = GAME_STEPS.slice(0, currentStepIndex + 1);
   const completedSteps = GAME_STEPS.slice(0, currentStepIndex);
   const finalSubmissionTargets = LAST_STEP_SUBMISSIONS;
+
+  useEffect(() => {
+    if (
+      phase !== 'search'
+      || currentStep.id !== 2
+      || hasShownStepESearchHint
+      || isStepESearchSolved
+    ) return;
+
+    const timerId = window.setTimeout(() => {
+      setHasShownStepESearchHint(true);
+      setCutInLines(CUT_IN_LINES.stepESearchHint);
+      setCutInIndex(0);
+      setCutInLogByStep(prev => ({
+        ...prev,
+        [currentStepIndex]: [...(prev[currentStepIndex] || []), ...CUT_IN_LINES.stepESearchHint],
+      }));
+    }, 60_000);
+
+    return () => window.clearTimeout(timerId);
+  }, [currentStep.id, currentStepIndex, hasShownStepESearchHint, isStepESearchSolved, phase]);
 
   const getPartnerEventKey = (stepId: number, eventIndex: number) => `${stepId}_${eventIndex}`;
 
@@ -324,6 +360,11 @@ export default function GameInterface() {
       if (currentStep.showBlueAnswerEffect) {
         // 青ハイライト演出モード：一時停止してボタン表示
         setIsPuzzleSolvedPending(true);
+        if (currentStep.id === 2) {
+          setIsAdditionalRuleUnlocked(true);
+          setShowRulesInfoPrompt(true);
+          startCutIn(CUT_IN_LINES.stepEPuzzleSolved, currentStepIndex);
+        }
       } else {
         proceedToSearchPhase();
       }
@@ -339,6 +380,9 @@ export default function GameInterface() {
     if (searchLocation === location && searchPosition === position && searchItem.trim() === item) {
       setErrorMsg('');
       setSearchItem('');
+      if (currentStep.id === 2) {
+        setIsStepESearchSolved(true);
+      }
       // 次のステップへ
       if (currentStepIndex < GAME_STEPS.length - 1) {
         const nextStep = GAME_STEPS[currentStepIndex + 1];
@@ -376,6 +420,12 @@ export default function GameInterface() {
         setActiveTab('main');
         if (currentStepIndex === 0) {
           showCorrectThenCutIn(CUT_IN_LINES.stepOnePuzzleStart, currentStepIndex + 1);
+        }
+        if (currentStepIndex === 2) {
+          startCutIn(CUT_IN_LINES.stepUSearchSolved, currentStepIndex);
+        }
+        if (currentStep.id === 2) {
+          startCutIn(CUT_IN_LINES.stepESearchSolved, currentStepIndex);
         }
         if (nextStep.memos?.length) {
           setTutorialDialog('new_memo_unlocked');
@@ -488,7 +538,9 @@ export default function GameInterface() {
               <div className="absolute right-4 bottom-20 z-30 flex flex-col items-end gap-2">
                 {showRulesInfoPrompt && (
                   <div className="max-w-56 rounded-xl border border-cyan-300/40 bg-slate-800/95 px-3 py-2 text-xs font-bold leading-relaxed text-cyan-50 shadow-lg shadow-cyan-950/40 animate-pulse">
-                    ゲームのルールはいつでも確認できます。まずはここを押してみましょう。
+                    {isAdditionalRuleUnlocked
+                      ? '追加で判明したルールがあります。informationを確認してください。'
+                      : 'ゲームのルールはいつでも確認できます。まずはここを押してみましょう。'}
                   </div>
                 )}
                 <button
@@ -498,9 +550,14 @@ export default function GameInterface() {
                     setShowRulesInfo(true);
                     setShowRulesInfoPrompt(false);
                   }}
-                  className={`flex h-12 w-12 items-center justify-center rounded-full border border-cyan-300/50 bg-slate-800/90 text-cyan-300 shadow-lg shadow-cyan-950/40 backdrop-blur transition-all hover:border-cyan-200 hover:bg-slate-700 active:scale-95 ${showRulesInfoPrompt ? 'animate-bounce ring-2 ring-cyan-300/70' : ''}`}
+                  className={`relative flex h-12 w-12 items-center justify-center rounded-full border border-cyan-300/50 bg-slate-800/90 text-cyan-300 shadow-lg shadow-cyan-950/40 backdrop-blur transition-all hover:border-cyan-200 hover:bg-slate-700 active:scale-95 ${showRulesInfoPrompt ? 'animate-bounce ring-2 ring-cyan-300/70' : ''}`}
                 >
                   <span className="text-xl font-black leading-none">i</span>
+                  {showRulesInfoPrompt && (
+                    <span className="absolute -right-2 -top-2 rounded-full bg-rose-500 px-1.5 py-0.5 text-[9px] font-black leading-none text-white shadow-lg">
+                      NEW
+                    </span>
+                  )}
                 </button>
               </div>
             )}
@@ -546,7 +603,7 @@ export default function GameInterface() {
               </div>
             </div>}
 
-            {isFollowUpPuzzle && currentStep.followUpPuzzle && (
+            {phase === 'puzzle' && isFollowUpPuzzle && currentStep.followUpPuzzle && (
               <div className="border-b border-emerald-500/30 bg-emerald-950/40 px-4 py-3">
                 <p className="text-sm font-bold leading-relaxed text-emerald-100">
                   緑が追加してみた部分だけど、追加したことで読み方が変わるものは何？
@@ -919,7 +976,11 @@ export default function GameInterface() {
             
             {/* 相棒と話すボタン（リスト上部） */}
             {(() => {
-              const availablePartnerEvents = currentStep.partnerEvents?.filter(e => unlockedPhotos.includes(e.targetPhoto)) || [];
+              const isCurrentPuzzleSolved = phase === 'search' || isPuzzleSolvedPending;
+              const availablePartnerEvents = currentStep.partnerEvents?.filter(event => (
+                unlockedPhotos.includes(event.targetPhoto)
+                && (!event.availableAfterPuzzleSolved || isCurrentPuzzleSolved)
+              )) || [];
               if (availablePartnerEvents.length === 0) return null;
               
               return (
@@ -969,15 +1030,30 @@ export default function GameInterface() {
 
                   {hasQuestion && !isSolved && (
                     <div className="mt-3 pt-3 border-t border-indigo-500/30 flex flex-col gap-2">
-                      <span className="text-xs text-indigo-300 font-semibold">回答を入力してください</span>
+                      <span className="text-xs text-indigo-300 font-semibold">
+                        {activeEvent.questionAnswer!.choices ? '回答を選択してください' : '回答を入力してください'}
+                      </span>
                       <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={partnerAnswerInput}
-                          onChange={(e) => setPartnerAnswerInput(e.target.value)}
-                          className="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500"
-                          placeholder="答え"
-                        />
+                        {activeEvent.questionAnswer!.choices ? (
+                          <select
+                            value={partnerAnswerInput}
+                            onChange={(e) => setPartnerAnswerInput(e.target.value)}
+                            className="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500"
+                          >
+                            <option value="">選択してください</option>
+                            {activeEvent.questionAnswer!.choices.map(choice => (
+                              <option key={choice} value={choice}>{choice}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={partnerAnswerInput}
+                            onChange={(e) => setPartnerAnswerInput(e.target.value)}
+                            className="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500"
+                            placeholder="答え"
+                          />
+                        )}
                         <button
                           onClick={() => {
                             if (matchesTextAnswer(partnerAnswerInput, [
@@ -1110,17 +1186,23 @@ export default function GameInterface() {
                       <span className="text-slate-200">{submittedAssumption.originalSubmittedItem}</span>
                     </div>
                   )}
-                  {step.partnerEvents?.map(event => 
-                    readPartnerMessages.includes(event.message) && (
+                  {step.partnerEvents?.map((event, eventIndex) => {
+                    const questionKey = getPartnerEventKey(step.id, eventIndex);
+                    const isQuestionSolved = solvedPartnerQuestions.includes(questionKey);
+                    const loggedMessage = event.questionAnswer
+                      ? (isQuestionSolved ? event.questionAnswer.successMessage : null)
+                      : event.message;
+
+                    return readPartnerMessages.includes(event.message) && loggedMessage ? (
                       <div key={event.message} className="mt-3 bg-indigo-900/40 p-2.5 rounded-xl rounded-tl-none border border-indigo-500/30 text-sm">
                         <div className="flex items-center gap-1.5 mb-1">
                           <div className="w-4 h-4 bg-indigo-500 rounded-full flex items-center justify-center text-[8px] font-bold">相</div>
                           <span className="text-indigo-400 font-bold text-xs">相棒</span>
                         </div>
-                        <span className="text-indigo-100 text-xs">{event.message}</span>
+                        <span className="text-indigo-100 text-xs">{loggedMessage}</span>
                       </div>
-                    )
-                  )}
+                    ) : null;
+                  })}
                 </div>
                 );
               })}
@@ -1315,21 +1397,6 @@ export default function GameInterface() {
                 </button>
               </>
             )}
-            {tutorialDialog === 'new_memo_unlocked' && (
-              <>
-                <div className="mb-4">
-                  <p className="text-slate-100 text-base leading-relaxed">
-                    新たな仕様が解放されました。メモをご確認ください。
-                  </p>
-                </div>
-                <button
-                  onClick={() => setTutorialDialog(null)}
-                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold py-2 rounded-lg hover:from-emerald-500 hover:to-teal-500 active:scale-95 transition-all"
-                >
-                  OK
-                </button>
-              </>
-            )}
           </div>
         </div>
       )}
@@ -1378,6 +1445,14 @@ export default function GameInterface() {
                 <p className="mt-2 text-slate-300">※位置の基準に選んだアイテムは転送できない</p>
                 <p className="mt-2 text-slate-300">※入れ子構造の中身だけを直接取り出せないが、対象となったアイテムの中身全てが転送される</p>
               </section>
+
+              {isAdditionalRuleUnlocked && (
+                <section className="rounded-xl border border-rose-400/30 bg-rose-950/20 p-3">
+                  <h3 className="mb-2 font-bold text-rose-300">追加で判明したルール</h3>
+                  <p>謎の回答が青くなった場合、イラストに登場していなくても可視化できる状態となったことを示す</p>
+                  <p className="mt-2 text-slate-300">※青くなる条件は、ゲームフィールドに存在していること</p>
+                </section>
+              )}
             </div>
           </div>
         </div>
