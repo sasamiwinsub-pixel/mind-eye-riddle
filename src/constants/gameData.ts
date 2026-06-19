@@ -47,6 +47,13 @@ export interface LastStepSubmissionData {
   originalSubmittedItem: string;
   logDisplayItem?: string;
   retryItem: string;
+  acceptedRetryItems?: string[];
+  acceptedTargets: {
+    location: string;
+    item: string;
+    position: string;
+  }[];
+  excludeFromFinalSubmission?: boolean;
   isPending?: boolean;
 }
 
@@ -204,7 +211,7 @@ export const GAME_STEPS: StepData[] = [
       H: ['右の缶', '左の缶']
     },
     partnerEvents: [
-      { targetPhoto: 'A',  message: 'あれ？掛け軸に文字が増えたね'
+      { targetPhoto: 'A',  message: 'あれ？「き」の謎画像のタイミングで掛け軸に文字が増えたね'
         
        },
       { targetPhoto: 'H', displayPhotoName: '？', message: 'どこかにアルミの可能性があるものはないか？',
@@ -258,16 +265,92 @@ export const LAST_STEP_START_PHOTO_UPDATE: PhotoUpdateData = {
 };
 
 export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
-  { stepIndex: 0, label: '0', originalSubmittedItem: 'キー', retryItem: 'キー' },
-  { stepIndex: 1, label: '1', originalSubmittedItem: '電池', retryItem: '缶かつ炭酸飲料' },
-  { stepIndex: 2, label: '1-5', originalSubmittedItem: 'ライオンの銅像', retryItem: '机' },
-  { stepIndex: 3, label: '2', originalSubmittedItem: '卵', retryItem: '横川' },
-  { stepIndex: 4, label: '3', originalSubmittedItem: 'バスボール', logDisplayItem: '球体', retryItem: 'ピンポン玉' },
-  { stepIndex: 5, label: '4', originalSubmittedItem: 'ハンガー', retryItem: '10円玉' },
-  { stepIndex: 6, label: '5', originalSubmittedItem: '缶', retryItem: '1円玉' },
-  { stepIndex: 7, label: '6', originalSubmittedItem: '座布団', retryItem: '座布団' },
-  { stepIndex: 8, label: '7', originalSubmittedItem: '蜘蛛', retryItem: '蜘蛛', isPending: true },
+  {
+    stepIndex: 0,
+    label: '0',
+    originalSubmittedItem: 'キー',
+    retryItem: 'キー',
+    acceptedTargets: [{ location: 'A', item: '金庫', position: '中' }],
+  },
+  {
+    stepIndex: 1,
+    label: '1',
+    originalSubmittedItem: '電池',
+    retryItem: 'コーラ',
+    acceptedRetryItems: ['コカ・コーラ', 'こか・こーら', 'コカコーラ', 'こかこーら', 'こーら', '缶', 'かん'],
+    acceptedTargets: [{ location: 'H', item: '酒瓶', position: '左' }],
+  },
+  {
+    stepIndex: 2,
+    label: '1-5',
+    originalSubmittedItem: 'ライオンの銅像',
+    retryItem: '机',
+    acceptedRetryItems: ['つくえ', 'デスク', 'テーブル', 'ローテーブル'],
+    acceptedTargets: [
+      { location: 'A', item: '盆', position: '下' },
+      { location: 'A', item: '湯呑', position: '下' },
+      { location: 'A', item: 'ティーパック', position: '下' },
+      { location: 'A', item: '畳', position: '上' },
+    ],
+  },
+  {
+    stepIndex: 3,
+    label: '2',
+    originalSubmittedItem: '卵',
+    retryItem: '横山',
+    acceptedRetryItems: ['よこやま', 'ヨコヤマ', '横山'],
+    acceptedTargets: [{ location: 'B', item: '時計', position: '下' }],
+  },
+  {
+    stepIndex: 4,
+    label: '3',
+    originalSubmittedItem: 'バスボール',
+    logDisplayItem: '球体',
+    retryItem: 'ピンポン玉',
+    acceptedRetryItems: ['ピンポン玉', 'ピンポンだま', '卓球の玉', '卓球玉', '卓球だま'],
+    acceptedTargets: [
+      { location: 'I', item: 'ラケット', position: '下' },
+      { location: 'I', item: '卓球台', position: '上' },
+    ],
+  },
+  {
+    stepIndex: 5,
+    label: '4',
+    originalSubmittedItem: 'ハンガー',
+    retryItem: '10円玉',
+    acceptedRetryItems: ['10円玉', '10えんだま', 'じゅうえんだま', 'ジュウエンダマ', '10円', '10えん', 'じゅうえん', 'ジュウエン', '銅貨', 'どうか'],
+    acceptedTargets: [{ location: 'K', item: '募金箱', position: '中' }],
+  },
+  {
+    stepIndex: 6,
+    label: '5',
+    originalSubmittedItem: '缶',
+    retryItem: '1円玉',
+    acceptedRetryItems: ['1円玉', '1えんだま', 'いちえんだま', 'イチエンダマ', '1円', '1えん', 'いちえん', 'イチエン'],
+    acceptedTargets: [{ location: 'K', item: '募金箱', position: '中' }],
+    excludeFromFinalSubmission: true,
+  },
+  {
+    stepIndex: 7,
+    label: '6',
+    originalSubmittedItem: '座布団',
+    retryItem: '座布団',
+    acceptedTargets: [{ location: 'A', item: 'イス', position: '上' }],
+  },
+  {
+    stepIndex: 8,
+    label: '7',
+    originalSubmittedItem: '蜘蛛',
+    retryItem: 'バスボール',
+    acceptedRetryItems: ['ばすぼむ', '入浴剤', 'ばすだま', 'バスだま', '入浴球', 'にゅうよくだま', 'にゅうよくきゅう', 'ばすぼーる', 'バスぼーる', 'ばすボール', 'バスボム'],
+    acceptedTargets: [{ location: 'E', item: 'パック', position: '中' }],
+    isPending: true,
+  },
 ];
+
+export const FINAL_STEP_SUBMISSIONS = LAST_STEP_SUBMISSIONS.filter(
+  submission => !submission.excludeFromFinalSubmission
+);
 
 export const LOCATIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 export const POSITIONS = ['中','上', '下', '左', '右'];

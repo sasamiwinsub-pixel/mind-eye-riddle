@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { GAME_STEPS, LAST_STEP_START_PHOTO_UPDATE, LAST_STEP_SUBMISSIONS, LOCATIONS, POSITIONS } from '@/constants/gameData';
+import { FINAL_STEP_SUBMISSIONS, GAME_STEPS, LAST_STEP_START_PHOTO_UPDATE, LAST_STEP_SUBMISSIONS, LOCATIONS, POSITIONS } from '@/constants/gameData';
 import { loadSavedSession, saveGameProgress } from '@/lib/gameProgressStorage';
 
 type Tab = 'main' | 'map' | 'photos' | 'log';
@@ -20,6 +20,7 @@ type FinalSubmission = {
 type PendingCutIn = {
   lines: CutInLine[];
   stepIndex: number;
+  skipLog?: boolean;
 };
 type SavedGameProgress = {
   currentStepId: number;
@@ -32,6 +33,9 @@ type SavedGameProgress = {
   lastStep: 0 | 1 | 2 | 3;
   lastStepOneName: string;
   hotSpringAnswer: string;
+  lastStepOneAnswerLog: string | null;
+  lastStepTwoAnswerLog: string | null;
+  isGameCleared: boolean;
   finalSubmissions: FinalSubmission[];
   showCorrectOverlay: boolean;
   isRulesInfoUnlocked: boolean;
@@ -112,9 +116,12 @@ const CUT_IN_LINES = {
   lastStepThreeStart: [
     { speaker: '相棒', text: '温泉に転送してみたけど、すぐに木のフィギュアが出てきたね' },
     { speaker: '相棒', text: 'どうやらEにある謎の球体、水や温度に反応して球体が消えていくようだ。徐々にフィギュアが見えてきたので間違いない' },
-    { speaker: '相棒', text: '一見すると蜘蛛を直接名称指定すれば解決しそうだけど、入れ子構造の中身は直接取り出せないルールだ。球体の名称は一体何だろう' },
+    { speaker: '相棒', text: '一見するとEの球体にありそうな蜘蛛を直接名称指定すれば解決しそうだけど、入れ子構造の中身は直接取り出せないルールだ' },
+    { speaker: '相棒', text: 'コンプリートセットのどれかに蜘蛛が入っていそうだけど、いずれにせよ球体の名称を指定して全ての球体を転送するしかなさそうだ' },
   ],
 } satisfies Record<string, CutInLine[]>;
+
+const getLastStepLogIndex = (step: 1 | 2 | 3) => GAME_STEPS.length + step - 1;
 
 const normalizeTextAnswer = (value: string) => value
   .normalize('NFKC')
@@ -161,6 +168,7 @@ const isSavedGameProgress = (value: unknown): value is SavedGameProgress => {
     isRecord(value.pendingCutIn)
     && isCutInLines(value.pendingCutIn.lines)
     && typeof value.pendingCutIn.stepIndex === 'number'
+    && (value.pendingCutIn.skipLog === undefined || typeof value.pendingCutIn.skipLog === 'boolean')
   );
   const validPhotoFiles = isRecord(value.photoFiles)
     && Object.values(value.photoFiles).every(filename => typeof filename === 'string');
@@ -183,8 +191,11 @@ const isSavedGameProgress = (value: unknown): value is SavedGameProgress => {
     && (value.lastStep === 0 || value.lastStep === 1 || value.lastStep === 2 || value.lastStep === 3)
     && typeof value.lastStepOneName === 'string'
     && typeof value.hotSpringAnswer === 'string'
+    && (value.lastStepOneAnswerLog === null || typeof value.lastStepOneAnswerLog === 'string')
+    && (value.lastStepTwoAnswerLog === null || typeof value.lastStepTwoAnswerLog === 'string')
+    && typeof value.isGameCleared === 'boolean'
     && Array.isArray(value.finalSubmissions)
-    && value.finalSubmissions.length === LAST_STEP_SUBMISSIONS.length
+    && value.finalSubmissions.length === FINAL_STEP_SUBMISSIONS.length
     && value.finalSubmissions.every(isFinalSubmission)
     && typeof value.showCorrectOverlay === 'boolean'
     && typeof value.isRulesInfoUnlocked === 'boolean'
@@ -216,6 +227,22 @@ const isSavedGameProgress = (value: unknown): value is SavedGameProgress => {
   );
 };
 
+const createInitialFinalSubmissions = (): FinalSubmission[] => (
+  FINAL_STEP_SUBMISSIONS.map(submission => {
+    const originalStep = GAME_STEPS[submission.stepIndex];
+    const isSameAsOriginal = !submission.isPending
+      && submission.originalSubmittedItem === submission.retryItem;
+    const unchangedTarget = submission.acceptedTargets[0];
+
+    return {
+      location: isSameAsOriginal ? unchangedTarget.location : originalStep.searchTarget.location,
+      position: isSameAsOriginal ? unchangedTarget.position : originalStep.searchTarget.position,
+      item: isSameAsOriginal ? unchangedTarget.item : '',
+      specifiedName: isSameAsOriginal ? submission.retryItem : '',
+    };
+  })
+);
+
 
 export default function GameInterface() {
   const [currentStepId, setCurrentStepId] = useState(0);
@@ -231,17 +258,10 @@ export default function GameInterface() {
   const [lastStep, setLastStep] = useState<0 | 1 | 2 | 3>(0);
   const [lastStepOneName, setLastStepOneName] = useState('');
   const [hotSpringAnswer, setHotSpringAnswer] = useState('');
-  const [finalSubmissions, setFinalSubmissions] = useState<FinalSubmission[]>(
-    LAST_STEP_SUBMISSIONS.map(submission => {
-      const step = GAME_STEPS[submission.stepIndex];
-      return {
-        location: step.searchTarget.location,
-        position: step.searchTarget.position,
-        item: !submission.isPending && submission.originalSubmittedItem === submission.retryItem ? step.searchTarget.item : '',
-        specifiedName: '',
-      };
-    })
-  );
+  const [lastStepOneAnswerLog, setLastStepOneAnswerLog] = useState<string | null>(null);
+  const [lastStepTwoAnswerLog, setLastStepTwoAnswerLog] = useState<string | null>(null);
+  const [isGameCleared, setIsGameCleared] = useState(false);
+  const [finalSubmissions, setFinalSubmissions] = useState<FinalSubmission[]>(createInitialFinalSubmissions);
 
   const [errorMsg, setErrorMsg] = useState('');
   const [showCorrectOverlay, setShowCorrectOverlay] = useState(false);
@@ -310,8 +330,7 @@ export default function GameInterface() {
     : [currentStep.puzzleAnswer, ...(currentStep.acceptedPuzzleAnswers || [])];
   const displayTitle = lastStep > 0 ? `LASTSTEP${lastStep}` : currentStep.title;
   const reachedSteps = GAME_STEPS.slice(0, currentStepIndex + 1);
-  const completedSteps = GAME_STEPS.slice(0, currentStepIndex);
-  const finalSubmissionTargets = LAST_STEP_SUBMISSIONS;
+  const finalSubmissionTargets = FINAL_STEP_SUBMISSIONS;
 
   useEffect(() => {
     const restoreTimer = window.setTimeout(() => {
@@ -327,6 +346,9 @@ export default function GameInterface() {
         setLastStep(savedGame.lastStep);
         setLastStepOneName(savedGame.lastStepOneName);
         setHotSpringAnswer(savedGame.hotSpringAnswer);
+        setLastStepOneAnswerLog(savedGame.lastStepOneAnswerLog);
+        setLastStepTwoAnswerLog(savedGame.lastStepTwoAnswerLog);
+        setIsGameCleared(savedGame.isGameCleared);
         setFinalSubmissions(savedGame.finalSubmissions);
         setShowCorrectOverlay(savedGame.showCorrectOverlay);
         setIsRulesInfoUnlocked(savedGame.isRulesInfoUnlocked);
@@ -373,6 +395,9 @@ export default function GameInterface() {
       lastStep,
       lastStepOneName,
       hotSpringAnswer,
+      lastStepOneAnswerLog,
+      lastStepTwoAnswerLog,
+      isGameCleared,
       finalSubmissions,
       showCorrectOverlay,
       isRulesInfoUnlocked,
@@ -413,6 +438,7 @@ export default function GameInterface() {
     hotSpringAnswer,
     isAdditionalRuleUnlocked,
     isFollowUpPuzzle,
+    isGameCleared,
     isImageCollapsed,
     isPuzzleSolvedPending,
     isResubmissionRuleUnlocked,
@@ -420,7 +446,9 @@ export default function GameInterface() {
     isSingleVisualizationRuleUnlocked,
     isStepOSearchSolved,
     lastStep,
+    lastStepOneAnswerLog,
     lastStepOneName,
+    lastStepTwoAnswerLog,
     newPhotos,
     pendingCutIn,
     phase,
@@ -515,17 +543,26 @@ export default function GameInterface() {
     }
   };
 
-  const startCutIn = (lines: CutInLine[], stepIndex = currentStepIndex) => {
-    setCutInLines(lines);
-    setCutInIndex(0);
+  const addCutInToLog = (lines: CutInLine[], stepIndex: number) => {
     setCutInLogByStep(prev => ({
       ...prev,
       [stepIndex]: [...(prev[stepIndex] || []), ...lines],
     }));
   };
 
-  const showCorrectThenCutIn = (lines: CutInLine[], stepIndex = currentStepIndex) => {
-    setPendingCutIn({ lines, stepIndex });
+  const startCutIn = (lines: CutInLine[], stepIndex = currentStepIndex, addToLog = true) => {
+    setCutInLines(lines);
+    setCutInIndex(0);
+    if (addToLog) addCutInToLog(lines, stepIndex);
+  };
+
+  const showCorrectThenCutIn = (
+    lines: CutInLine[],
+    stepIndex = currentStepIndex,
+    logImmediately = false,
+  ) => {
+    if (logImmediately) addCutInToLog(lines, stepIndex);
+    setPendingCutIn({ lines, stepIndex, skipLog: logImmediately });
     setShowCorrectOverlay(true);
   };
 
@@ -540,7 +577,7 @@ export default function GameInterface() {
     setIsResubmissionRuleUnlocked(true);
     setShowRulesInfoPrompt(true);
     setApplyLastStepPhotoUpdateAfterCutIn(true);
-    showCorrectThenCutIn(CUT_IN_LINES.lastStepStart, currentStepIndex);
+    showCorrectThenCutIn(CUT_IN_LINES.lastStepStart, getLastStepLogIndex(1));
   };
 
   const applyLastStepStartPhotoUpdate = () => {
@@ -565,7 +602,7 @@ export default function GameInterface() {
   const closeCorrectOverlay = () => {
     setShowCorrectOverlay(false);
     if (pendingCutIn) {
-      startCutIn(pendingCutIn.lines, pendingCutIn.stepIndex);
+      startCutIn(pendingCutIn.lines, pendingCutIn.stepIndex, !pendingCutIn.skipLog);
       setPendingCutIn(null);
     }
   };
@@ -771,10 +808,13 @@ export default function GameInterface() {
       && matchesTextAnswer(lastStepOneName, ['1円玉'])
     ) {
       setErrorMsg('');
+      setLastStepOneAnswerLog(
+        `場所：${searchLocation} / 基準アイテム：${searchItem} / 位置：${searchPosition} / 名称指定：${lastStepOneName}`
+      );
       setSearchItem('');
       setLastStepOneName('');
       setLastStep(2);
-      showCorrectThenCutIn(CUT_IN_LINES.lastStepTwoStart, currentStepIndex);
+      showCorrectThenCutIn(CUT_IN_LINES.lastStepTwoStart, getLastStepLogIndex(2));
       return;
     }
     setErrorMsg('場所、位置、アイテム、または名称指定が違います。');
@@ -784,12 +824,13 @@ export default function GameInterface() {
     e.preventDefault();
     if (matchesTextAnswer(hotSpringAnswer, ['き'])) {
       setErrorMsg('');
+      setLastStepTwoAnswerLog(`提出場所：${hotSpringAnswer}`);
       setHotSpringAnswer('');
       setLastStep(3);
       setUnlockedPhotos(prev => Array.from(new Set([...prev, 'き'])));
       setPhotoFiles(prev => ({ ...prev, き: 'き', E: 'E4' }));
       setNewPhotos(['き', 'E']);
-      showCorrectThenCutIn(CUT_IN_LINES.lastStepThreeStart, currentStepIndex);
+      showCorrectThenCutIn(CUT_IN_LINES.lastStepThreeStart, getLastStepLogIndex(3), true);
       return;
     }
     setErrorMsg('温泉だと思う提出場所が違います。');
@@ -798,19 +839,24 @@ export default function GameInterface() {
   const handleFinalSubmissionsSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const allCorrect = finalSubmissionTargets.every((target, index) => {
-      const originalStep = GAME_STEPS[target.stepIndex];
       const submission = finalSubmissions[index];
+      const matchesAcceptedTarget = target.acceptedTargets.some(acceptedTarget => (
+        submission
+        && submission.location === acceptedTarget.location
+        && submission.position === acceptedTarget.position
+        && submission.item === acceptedTarget.item
+      ));
       return submission
-        && submission.location === originalStep.searchTarget.location
-        && submission.position === originalStep.searchTarget.position
-        && submission.item === originalStep.searchTarget.item
-        && matchesTextAnswer(submission.specifiedName, [target.retryItem]);
+        && matchesAcceptedTarget
+        && matchesTextAnswer(submission.specifiedName, [
+          target.retryItem,
+          ...(target.acceptedRetryItems || []),
+        ]);
     });
 
     if (allCorrect) {
       setErrorMsg('');
-      setShowCorrectOverlay(true);
-      alert('ゲームクリア！おめでとうございます！');
+      setIsGameCleared(true);
     } else {
       setErrorMsg('どこかの提出内容が違います。これまでの記録を見直してみましょう。');
     }
@@ -818,7 +864,11 @@ export default function GameInterface() {
 
   const activeCutInLine = cutInLines[cutInIndex] || null;
   const selectedCutInLogLines = selectedCutInLogStep !== null ? cutInLogByStep[selectedCutInLogStep] || [] : [];
-  const selectedCutInLogTitle = selectedCutInLogStep !== null ? GAME_STEPS[selectedCutInLogStep]?.title || '' : '';
+  const selectedCutInLogTitle = selectedCutInLogStep === null
+    ? ''
+    : selectedCutInLogStep < GAME_STEPS.length
+      ? GAME_STEPS[selectedCutInLogStep]?.title || ''
+      : `LASTSTEP${selectedCutInLogStep - GAME_STEPS.length + 1}`;
   const cutInTheme = activeCutInLine?.speaker === 'ゲームマスター'
     ? 'border-rose-400/70 from-rose-950/95 via-slate-950/95 to-rose-900/90 text-rose-100'
     : activeCutInLine?.speaker === '自分'
@@ -832,6 +882,33 @@ export default function GameInterface() {
 
   if (!hasRestoredProgress) {
     return <div className="mx-auto h-[100dvh] max-w-md bg-slate-950" />;
+  }
+
+  if (isGameCleared) {
+    return (
+      <div className="relative mx-auto flex h-[100dvh] max-w-md flex-col overflow-y-auto bg-slate-950 px-6 py-8 text-slate-100 no-scrollbar">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -left-24 top-16 h-64 w-64 rounded-full bg-cyan-500/15 blur-3xl" />
+          <div className="absolute -right-24 bottom-10 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl" />
+        </div>
+        <main className="relative z-10 flex min-h-full flex-col items-center justify-center text-center">
+          <p className="mb-3 text-xs font-black tracking-[0.35em] text-cyan-300">GAME CLEAR</p>
+          <div className="relative w-full max-w-sm aspect-square">
+            <Image
+              src="/images/clear.png"
+              alt="ゲームクリア"
+              fill
+              priority
+              className="object-contain drop-shadow-[0_0_30px_rgba(34,211,238,0.25)]"
+            />
+          </div>
+          <h1 className="mt-2 text-3xl font-black tracking-wider text-white">ゲームクリア</h1>
+          <p className="mt-4 rounded-2xl border border-cyan-300/20 bg-slate-900/70 px-5 py-4 text-lg font-bold leading-relaxed text-cyan-50 shadow-xl backdrop-blur">
+            心の眼で全ての謎を解き明かしました
+          </p>
+        </main>
+      </div>
+    );
   }
 
   return (
@@ -848,9 +925,9 @@ export default function GameInterface() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto no-scrollbar pb-24 relative">
+      <main className="relative min-h-0 flex-1 overflow-y-auto pb-24 no-scrollbar">
         {activeTab === 'main' && (
-          <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex min-h-full flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
             {isRulesInfoUnlocked && (
               <div className="absolute right-4 bottom-20 z-30 flex flex-col items-end gap-2">
                 {showRulesInfoPrompt && (
@@ -883,7 +960,7 @@ export default function GameInterface() {
 
             {/* Image Toggle Bar */}
             {(lastStep === 0 || lastStep === 3) && <div
-              className="bg-slate-800 border-b border-slate-700 flex justify-between items-center px-4 py-2 cursor-pointer hover:bg-slate-700 transition-colors"
+              className="flex shrink-0 cursor-pointer items-center justify-between border-b border-slate-700 bg-slate-800 px-4 py-2 transition-colors hover:bg-slate-700"
               onClick={() => setIsImageCollapsed(!isImageCollapsed)}
             >
               <span className="text-sm font-semibold text-slate-300 flex items-center gap-2">
@@ -902,7 +979,7 @@ export default function GameInterface() {
             </div>}
 
             {/* Image Area */}
-            {(lastStep === 0 || lastStep === 3) && <div className={`transition-all duration-500 overflow-hidden ${isImageCollapsed ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'}`}>
+            {(lastStep === 0 || lastStep === 3) && <div className={`shrink-0 overflow-hidden transition-all duration-500 ${isImageCollapsed ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'}`}>
               <div 
                 className="relative w-full aspect-4/3 bg-black flex items-center justify-center border-b border-slate-800 shadow-lg cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={() => setZoomedImage(activePuzzleImage)}
@@ -1010,7 +1087,7 @@ export default function GameInterface() {
                         </select>
                       </label>
                       <label className="block">
-                        <span className="mb-1 block text-xs text-slate-400">アイテム</span>
+                        <span className="mb-1 block text-xs text-slate-400">基準となるアイテム</span>
                         <select
                           value={searchItem}
                           onChange={(e) => setSearchItem(e.target.value)}
@@ -1094,8 +1171,12 @@ export default function GameInterface() {
                         const originalStep = GAME_STEPS[target.stepIndex];
                         const isSameAsOriginal = !target.isPending && target.originalSubmittedItem === target.retryItem;
                         const submission = finalSubmissions[index];
+                        const configuredItems = target.acceptedTargets
+                          .filter(acceptedTarget => acceptedTarget.location === submission.location)
+                          .map(acceptedTarget => acceptedTarget.item);
                         const availableItems = Array.from(new Set([
                           ...getAvailableItemsForLocation(submission.location),
+                          ...configuredItems,
                           ...(submission.location === originalStep.searchTarget.location ? [originalStep.searchTarget.item] : []),
                         ]));
                         return (
@@ -1107,10 +1188,15 @@ export default function GameInterface() {
                               </span>
                             </div>
                             <div className="mb-2 rounded-lg border border-slate-700 bg-slate-900/70 px-2 py-1.5 text-[11px] leading-relaxed text-slate-300">
+                              <div>
+                                お題：<span className="font-bold text-slate-100">{originalStep.themeText}</span>
+                              </div>
                               {target.isPending ? (
-                                <>今回あわせて回答するお題：<span className="font-bold text-slate-100">蜘蛛</span></>
+                                <div className="mt-1">今回あわせて回答する提出です</div>
                               ) : (
-                                <>ログで見えないが提出したもの：<span className="font-bold text-slate-100">{target.originalSubmittedItem}</span></>
+                                <div className="mt-1">
+                                  ログで見えないが提出したもの：<span className="font-bold text-slate-100">{target.logDisplayItem ?? target.originalSubmittedItem}</span>
+                                </div>
                               )}
                             </div>
 
@@ -1141,7 +1227,7 @@ export default function GameInterface() {
                             </div>
 
                             <label className="mt-2 block">
-                              <span className="mb-1 block text-[11px] font-bold text-slate-400">アイテム</span>
+                              <span className="mb-1 block text-[11px] font-bold text-slate-400">基準となるアイテム</span>
                               <select
                                 value={submission.item}
                                 onChange={(e) => updateFinalSubmission(index, 'item', e.target.value)}
@@ -1456,22 +1542,36 @@ export default function GameInterface() {
           <div className="min-h-full px-4 pt-4 pb-28 flex flex-col animate-in fade-in zoom-in-95 duration-300">
             <h2 className="text-xl font-bold text-center text-white mb-4">過去の記録</h2>
             <div className="flex flex-col gap-4">
-              {completedSteps.map((step, stepIndex) => {
+              {reachedSteps.map((step, stepIndex) => {
+                const isCurrentStep = stepIndex === currentStepIndex;
+                const isWaitingForFollowUpPuzzle = Boolean(
+                  currentStep.followUpPuzzle && !isFollowUpPuzzle && isPuzzleSolvedPending
+                );
+                const isCurrentPuzzleSolved = phase === 'search'
+                  || lastStep > 0
+                  || (isPuzzleSolvedPending && !isWaitingForFollowUpPuzzle);
                 const stepCutInLog = cutInLogByStep[stepIndex] || [];
                 const submittedAssumption = LAST_STEP_SUBMISSIONS.find(submission => submission.stepIndex === stepIndex);
                 return (
                 <div key={step.id} className="bg-slate-800 rounded-xl p-3 border border-slate-700">
                   <div className="mb-2 flex items-center justify-between gap-2 border-b border-slate-700 pb-1">
                     <h3 className="font-bold text-blue-400">{step.title}</h3>
-                    {stepCutInLog.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedCutInLogStep(stepIndex)}
-                        className="shrink-0 rounded-full border border-indigo-400/50 bg-indigo-900/50 px-2.5 py-1 text-[11px] font-bold text-indigo-100 transition-colors hover:bg-indigo-800"
-                      >
-                        会話ログ
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {isCurrentStep && (
+                        <span className="rounded-full bg-cyan-900/70 px-2 py-1 text-[10px] font-bold text-cyan-200">
+                          現在
+                        </span>
+                      )}
+                      {stepCutInLog.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCutInLogStep(stepIndex)}
+                          className="shrink-0 rounded-full border border-indigo-400/50 bg-indigo-900/50 px-2.5 py-1 text-[11px] font-bold text-indigo-100 transition-colors hover:bg-indigo-800"
+                        >
+                          会話ログ
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-3">
                     <div 
@@ -1484,22 +1584,30 @@ export default function GameInterface() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-1 text-sm flex-1">
-                      <div>
-                        <span className="text-slate-500 text-xs block">謎の答え</span>
-                        <span className="text-slate-200">{step.puzzleAnswer}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 text-xs block">お題</span>
-                        <span className="text-slate-200">{step.themeText}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 text-xs block">特定したアイテム</span>
-                        <span className="text-slate-200">場所{step.searchTarget.location} ({step.searchTarget.position}): {step.searchTarget.item}</span>
-                      </div>
+                      {!isCurrentStep || isCurrentPuzzleSolved ? (
+                        <>
+                          <div>
+                            <span className="text-slate-500 text-xs block">謎の答え</span>
+                            <span className="text-slate-200">{step.puzzleAnswer}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 text-xs block">お題</span>
+                            <span className="text-slate-200">{step.themeText}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-xs text-slate-400">謎に挑戦中</span>
+                      )}
+                      {!isCurrentStep && (
+                        <div>
+                          <span className="text-slate-500 text-xs block">特定したアイテム</span>
+                          <span className="text-slate-200">場所{step.searchTarget.location} ({step.searchTarget.position}): {step.searchTarget.item}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   {/* 相棒との会話履歴 */}
-                  {submittedAssumption && (
+                  {!isCurrentStep && submittedAssumption && (
                     <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm">
                       <span className="text-slate-500 text-xs block">提出した想定のもの</span>
                       <span className="text-slate-200">
@@ -1527,11 +1635,50 @@ export default function GameInterface() {
                 </div>
                 );
               })}
-              {completedSteps.length === 0 && (
-                <div className="text-center text-slate-500 text-sm mt-8 p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
-                  まだクリアしたステップがありません。
-                </div>
-              )}
+              {lastStep > 0 && ([1, 2, 3] as const).slice(0, lastStep).map(step => {
+                const logIndex = getLastStepLogIndex(step);
+                const stepCutInLog = cutInLogByStep[logIndex] || [];
+                const question = step === 1
+                  ? 'お題「アルミ」を、場所・基準アイテム・位置・名称を指定して再提出する'
+                  : step === 2
+                    ? '温泉だと思う提出場所はどこか？'
+                    : null;
+                const submittedAnswer = step === 1
+                  ? lastStepOneAnswerLog
+                  : step === 2
+                    ? lastStepTwoAnswerLog
+                    : null;
+                return (
+                  <div key={`last-step-${step}`} className="rounded-xl border border-rose-500/30 bg-rose-950/20 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="font-bold text-rose-300">LASTSTEP{step}</h3>
+                      {stepCutInLog.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCutInLogStep(logIndex)}
+                          className="shrink-0 rounded-full border border-indigo-400/50 bg-indigo-900/50 px-2.5 py-1 text-[11px] font-bold text-indigo-100 transition-colors hover:bg-indigo-800"
+                        >
+                          会話ログ
+                        </button>
+                      )}
+                    </div>
+                    {question && (
+                      <div className="mt-3 space-y-2 rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs leading-relaxed">
+                        <div>
+                          <span className="block font-bold text-slate-500">お題・質問</span>
+                          <span className="text-slate-200">{question}</span>
+                        </div>
+                        {submittedAnswer && (
+                          <div>
+                            <span className="block font-bold text-slate-500">回答した内容</span>
+                            <span className="text-slate-100">{submittedAnswer}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
