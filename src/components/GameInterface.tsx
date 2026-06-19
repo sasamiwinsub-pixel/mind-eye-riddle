@@ -45,6 +45,7 @@ const CUT_IN_LINES = {
   ],
   stepESearchSolved: [
     { speaker: '相棒', text: '卵ごと提出しても、中に正解のアイテムを含んでいれば判定されるってことだね' },
+    { speaker: '相棒', text: '正解みたいだね。どういう球体なんだろう' },
   ],
   stepESearchHint: [
     { speaker: '相棒', text: 'Eのパックの中身が球体っぽいね。中身は良くわからないけどこれしかなさそう' },
@@ -347,17 +348,34 @@ export default function GameInterface() {
     }
   };
 
+  const proceedAfterPuzzleSolved = () => {
+    if (currentStep.followUpPuzzle && !isFollowUpPuzzle) {
+      setIsPuzzleSolvedPending(false);
+      setPuzzleInput('');
+      setIsFollowUpPuzzle(true);
+      return;
+    }
+    proceedToSearchPhase();
+  };
+
   const handlePuzzleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (matchesTextAnswer(puzzleInput, activePuzzleAnswers)) {
       setErrorMsg('');
       if (currentStep.followUpPuzzle && !isFollowUpPuzzle) {
         setPuzzleInput('');
-        setIsFollowUpPuzzle(true);
+        if (currentStep.showBlueAnswerEffect) {
+          setIsPuzzleSolvedPending(true);
+        } else {
+          setIsFollowUpPuzzle(true);
+        }
         showCorrectThenCutIn(CUT_IN_LINES.stepKiFirstPuzzleSolved, currentStepIndex);
         return;
       }
-      if (currentStep.showBlueAnswerEffect) {
+      const shouldShowBlueAnswerEffect = isFollowUpPuzzle
+        ? currentStep.followUpPuzzle?.showBlueAnswerEffect ?? currentStep.showBlueAnswerEffect
+        : currentStep.showBlueAnswerEffect;
+      if (shouldShowBlueAnswerEffect) {
         // 青ハイライト演出モード：一時停止してボタン表示
         setIsPuzzleSolvedPending(true);
         if (currentStep.id === 2) {
@@ -641,10 +659,10 @@ export default function GameInterface() {
                       />
                       <button
                         type="button"
-                        onClick={proceedToSearchPhase}
+                        onClick={proceedAfterPuzzleSolved}
                         className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold py-3 rounded-lg shadow-lg hover:from-blue-400 hover:to-cyan-400 active:scale-95 transition-all flex items-center justify-center gap-2"
                       >
-                        お題へ進む
+                        {currentStep.followUpPuzzle && !isFollowUpPuzzle ? '追加の謎へ進む' : 'お題へ進む'}
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                         </svg>
@@ -918,7 +936,7 @@ export default function GameInterface() {
         )}
 
         {activeTab === 'map' && (
-          <div className="p-4 h-full flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-300">
+          <div className="min-h-full px-4 pt-4 pb-28 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-300">
             <h2 className="text-xl font-bold text-center text-white mb-2">館内マップ</h2>
 
             {/* Memo Area */}
@@ -1134,7 +1152,7 @@ export default function GameInterface() {
         )}
 
         {activeTab === 'log' && (
-          <div className="p-4 h-full flex flex-col animate-in fade-in zoom-in-95 duration-300">
+          <div className="min-h-full px-4 pt-4 pb-28 flex flex-col animate-in fade-in zoom-in-95 duration-300">
             <h2 className="text-xl font-bold text-center text-white mb-4">過去の記録</h2>
             <div className="flex flex-col gap-4">
               {completedSteps.map((step, stepIndex) => {

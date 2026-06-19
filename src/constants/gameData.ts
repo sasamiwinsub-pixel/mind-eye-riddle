@@ -11,6 +11,7 @@ export interface StepData {
     image: string;
     answer: string;
     acceptedAnswers?: string[];
+    showBlueAnswerEffect?: boolean;
   };
   searchTarget: {
     location: string; // A~L
@@ -184,6 +185,7 @@ export const GAME_STEPS: StepData[] = [
       image: '/images/step5-2.png',
       answer: '温泉饅頭',
       acceptedAnswers: ['おんせんまんじゅう', 'オンセンマンジュウ', 'まんじゅう', '饅頭', 'マンジュウ'],
+      showBlueAnswerEffect: false,
     },
     showBlueAnswerEffect: true,
     searchTarget: { location: 'H', position: '右', item: '酒瓶' },
