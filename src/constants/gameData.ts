@@ -45,8 +45,14 @@ export interface LastStepSubmissionData {
   stepIndex: number;
   label: string;
   originalSubmittedItem: string;
+  logDisplayItem?: string;
   retryItem: string;
   isPending?: boolean;
+}
+
+export interface PhotoUpdateData {
+  unlockedPhotos?: string[];
+  updatedPhotos?: Record<string, string>;
 }
 
 export const GAME_STEPS: StepData[] = [
@@ -89,7 +95,7 @@ export const GAME_STEPS: StepData[] = [
     acceptedPuzzleAnswers: ['掛け軸', '掛軸'],
     searchTarget: { location: 'B', position: '下', item: '時計' },
     unlockedPhotos: ['I'],
-    updatedPhotosAtTheme: {'A': 'A2'}, // ステップ1-5のお題が出たタイミングで、写真AをA3に差し替える
+    updatedPhotosAtTheme: {'A': 'A2'}, // ステップ1-5のお題が出たタイミングで、写真AをA3に差し替える    
     unlockedLocationItems: {
       'I': ['ラケット'],
       'A': ['掛け軸']
@@ -112,6 +118,7 @@ export const GAME_STEPS: StepData[] = [
       E: ['パック'],
       F: ['短い個包装パック（左）', '長い個包装パック（右）']
     },
+    updatedPhotosAtPuzzle: {'B': 'B2'},
     partnerEvents: [
       { 
         targetPhoto: 'D', 
@@ -141,7 +148,7 @@ export const GAME_STEPS: StepData[] = [
   },
   {
     id: 3,
-    title: '提出場所：「え」',
+    title: '提出場所：「お」',
     puzzleImage: '/images/step3.png',
     themeText: '球体',
     puzzleAnswer: '12',
@@ -164,6 +171,7 @@ export const GAME_STEPS: StepData[] = [
     showBlueAnswerEffect: true,
     searchTarget: { location: 'G', position: '上', item: '浴衣' },
     unlockedPhotos: ['H'],
+    updatedPhotosAtPuzzle: { 'E': 'E2', },
     updatedPhotosAtTheme: {'A': 'A4', 'F': 'F3', 'I': 'I2' }, 
     unlockedPhotosAtTheme: ['K'],
     unlockedLocationItems: {
@@ -196,6 +204,9 @@ export const GAME_STEPS: StepData[] = [
       H: ['右の缶', '左の缶']
     },
     partnerEvents: [
+      { targetPhoto: 'A',  message: 'あれ？掛け軸に文字が増えたね'
+        
+       },
       { targetPhoto: 'H', displayPhotoName: '？', message: 'どこかにアルミの可能性があるものはないか？',
         availableAfterPuzzleSolved: true,
         questionAnswer: {
@@ -219,7 +230,8 @@ export const GAME_STEPS: StepData[] = [
     acceptedPuzzleAnswers: ['ほろぐらむ', 'hologram'],
     searchTarget: { location: 'A', position: '上', item: 'イス' },
     unlockedPhotos: ['J'],
-     updatedPhotosAtTheme: {'K': 'K2' },
+    updatedPhotosAtPuzzle: {'H': 'H3' },
+    updatedPhotosAtTheme: {'K': 'K2','H': 'H4', 'E': 'E3' },
     unlockedLocationItems: {
       J: ['体重計']
     },
@@ -233,18 +245,24 @@ export const GAME_STEPS: StepData[] = [
     acceptedPuzzleAnswers: ['完治', 'カンチ'],
     searchTarget: { location: 'J', position: '下', item: 'きつね' },
     unlockedPhotos: ['L'],
+    updatedPhotosAtPuzzle: { },
     unlockedLocationItems: {
       K: ['暖簾', '募金箱']
     },
   },
 ];
 
+export const LAST_STEP_START_PHOTO_UPDATE: PhotoUpdateData = {
+  unlockedPhotos: ['お'],
+  updatedPhotos: {'B': 'B', 'H': 'H5'},
+};
+
 export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
   { stepIndex: 0, label: '0', originalSubmittedItem: 'キー', retryItem: 'キー' },
   { stepIndex: 1, label: '1', originalSubmittedItem: '電池', retryItem: '缶かつ炭酸飲料' },
   { stepIndex: 2, label: '1-5', originalSubmittedItem: 'ライオンの銅像', retryItem: '机' },
   { stepIndex: 3, label: '2', originalSubmittedItem: '卵', retryItem: '横川' },
-  { stepIndex: 4, label: '3', originalSubmittedItem: 'バスボール', retryItem: 'ピンポン玉' },
+  { stepIndex: 4, label: '3', originalSubmittedItem: 'バスボール', logDisplayItem: '球体', retryItem: 'ピンポン玉' },
   { stepIndex: 5, label: '4', originalSubmittedItem: 'ハンガー', retryItem: '10円玉' },
   { stepIndex: 6, label: '5', originalSubmittedItem: '缶', retryItem: '1円玉' },
   { stepIndex: 7, label: '6', originalSubmittedItem: '座布団', retryItem: '座布団' },

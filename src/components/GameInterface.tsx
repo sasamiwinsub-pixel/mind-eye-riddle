@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { GAME_STEPS, LAST_STEP_SUBMISSIONS, LOCATIONS, POSITIONS } from '@/constants/gameData';
+import { GAME_STEPS, LAST_STEP_START_PHOTO_UPDATE, LAST_STEP_SUBMISSIONS, LOCATIONS, POSITIONS } from '@/constants/gameData';
+import { loadSavedSession, saveGameProgress } from '@/lib/gameProgressStorage';
 
 type Tab = 'main' | 'map' | 'photos' | 'log';
-type DialogMessage = 'tutorial_photos' | 'start_puzzle' | 'tutorial_search' | 'new_memo_unlocked' | null;
 type CutInSpeaker = '相棒' | '自分' | 'ゲームマスター';
 type CutInLine = {
   speaker: CutInSpeaker;
@@ -20,6 +20,43 @@ type FinalSubmission = {
 type PendingCutIn = {
   lines: CutInLine[];
   stepIndex: number;
+};
+type SavedGameProgress = {
+  currentStepId: number;
+  phase: 'puzzle' | 'search';
+  activeTab: Tab;
+  searchLocation: string;
+  searchPosition: string;
+  searchItem: string;
+  isFollowUpPuzzle: boolean;
+  lastStep: 0 | 1 | 2 | 3;
+  lastStepOneName: string;
+  hotSpringAnswer: string;
+  finalSubmissions: FinalSubmission[];
+  showCorrectOverlay: boolean;
+  isRulesInfoUnlocked: boolean;
+  isAdditionalRuleUnlocked: boolean;
+  isSingleVisualizationRuleUnlocked: boolean;
+  isResubmissionRuleUnlocked: boolean;
+  showRulesInfoPrompt: boolean;
+  hasShownStepOSearchHint: boolean;
+  isStepOSearchSolved: boolean;
+  stepOSearchHintStartedAt: number | null;
+  tabGuideStep: 'photos' | 'photoA' | 'map' | null;
+  hasStartedTabGuide: boolean;
+  isPuzzleSolvedPending: boolean;
+  isImageCollapsed: boolean;
+  readPartnerMessages: string[];
+  unlockedPhotos: string[];
+  photoFiles: Record<string, string>;
+  newPhotos: string[];
+  cutInLines: CutInLine[];
+  cutInIndex: number;
+  pendingCutIn: PendingCutIn | null;
+  applyLastStepPhotoUpdateAfterCutIn: boolean;
+  unlockSingleVisualizationRuleAfterCutIn: boolean;
+  cutInLogByStep: Record<number, CutInLine[]>;
+  solvedPartnerQuestions: string[];
 };
 
 const CUT_IN_LINES = {
@@ -45,10 +82,13 @@ const CUT_IN_LINES = {
   ],
   stepESearchSolved: [
     { speaker: '相棒', text: '卵ごと提出しても、中に正解のアイテムを含んでいれば判定されるってことだね' },
-    { speaker: '相棒', text: '正解みたいだね。どういう球体なんだろう' },
   ],
-  stepESearchHint: [
+  stepOSearchHint: [
     { speaker: '相棒', text: 'Eのパックの中身が球体っぽいね。中身は良くわからないけどこれしかなさそう' },
+  ],
+  stepOSearchSolved: [
+    { speaker: '相棒', text: '正解みたいだね。どういう球体なんだろう' },
+    { speaker: 'ゲームマスター', text: 'ここで補足情報ですが、種類・大きさ・名称の全て一致するものがある場合、一つしか可視化されません' },
   ],
   stepKiFirstPuzzleSolved: [
     { speaker: '相棒', text: 'ひょっとして、今まで登場したアイテム的にこっちのが適切なんじゃない？' },
@@ -58,7 +98,7 @@ const CUT_IN_LINES = {
     { speaker: '相棒', text: 'あと一つ提出するだけだ！' },
     { speaker: 'ゲームマスター', text: '残念ですが、提出場所「お」が、たった今正解から不正解判定に変わりました' },
     { speaker: '相棒', text: '何だって！？謎の球体が一度正解になったのに、不正解に変わったの...か？ひとまず「お」の場所を見に行ってみるよ' },
-    { speaker: 'ゲームマスター', text: '一度不正解となったため、全てを再提出してもらいます。ただし、別解があるお題では別解での回答してください。さらに、新たな制約が追加されました' },
+    { speaker: 'ゲームマスター', text: '一度不正解となったため、全てを再提出してもらいます。戻せるものは元の位置に戻してあるのでやり直しです。ただし、別解があるお題では別解での回答をしてください。さらに、新たな制約が追加されました' },
     { speaker: 'ゲームマスター', text: 'その制約とは、転送対象の名称の指定の必須化。名称を指定した場合、該当するものが同時に複数個転送されます' },
     { speaker: 'ゲームマスター', text: '我々はフェアさを大事にしているので、一つだけアドバイスを差し上げましょう。「お」を確認した後は、ひとまずお題「アルミ」を再提出してみましょう' },
   ],
@@ -86,6 +126,94 @@ const normalizeTextAnswer = (value: string) => value
 const matchesTextAnswer = (input: string, answers: string[]) => {
   const normalizedInput = normalizeTextAnswer(input);
   return answers.some(answer => normalizeTextAnswer(answer) === normalizedInput);
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
+
+const isStringArray = (value: unknown): value is string[] => (
+  Array.isArray(value) && value.every(item => typeof item === 'string')
+);
+
+const isCutInLine = (value: unknown): value is CutInLine => (
+  isRecord(value)
+  && (value.speaker === '相棒' || value.speaker === '自分' || value.speaker === 'ゲームマスター')
+  && typeof value.text === 'string'
+);
+
+const isCutInLines = (value: unknown): value is CutInLine[] => (
+  Array.isArray(value) && value.every(isCutInLine)
+);
+
+const isFinalSubmission = (value: unknown): value is FinalSubmission => (
+  isRecord(value)
+  && typeof value.location === 'string'
+  && typeof value.position === 'string'
+  && typeof value.item === 'string'
+  && typeof value.specifiedName === 'string'
+);
+
+const isSavedGameProgress = (value: unknown): value is SavedGameProgress => {
+  if (!isRecord(value)) return false;
+
+  const validPendingCutIn = value.pendingCutIn === null || (
+    isRecord(value.pendingCutIn)
+    && isCutInLines(value.pendingCutIn.lines)
+    && typeof value.pendingCutIn.stepIndex === 'number'
+  );
+  const validPhotoFiles = isRecord(value.photoFiles)
+    && Object.values(value.photoFiles).every(filename => typeof filename === 'string');
+  const validCutInLog = isRecord(value.cutInLogByStep)
+    && Object.values(value.cutInLogByStep).every(isCutInLines);
+  const validTabGuide = value.tabGuideStep === null
+    || value.tabGuideStep === 'photos'
+    || value.tabGuideStep === 'photoA'
+    || value.tabGuideStep === 'map';
+
+  return (
+    typeof value.currentStepId === 'number'
+    && GAME_STEPS.some(step => step.id === value.currentStepId)
+    && (value.phase === 'puzzle' || value.phase === 'search')
+    && (value.activeTab === 'main' || value.activeTab === 'map' || value.activeTab === 'photos' || value.activeTab === 'log')
+    && typeof value.searchLocation === 'string'
+    && typeof value.searchPosition === 'string'
+    && typeof value.searchItem === 'string'
+    && typeof value.isFollowUpPuzzle === 'boolean'
+    && (value.lastStep === 0 || value.lastStep === 1 || value.lastStep === 2 || value.lastStep === 3)
+    && typeof value.lastStepOneName === 'string'
+    && typeof value.hotSpringAnswer === 'string'
+    && Array.isArray(value.finalSubmissions)
+    && value.finalSubmissions.length === LAST_STEP_SUBMISSIONS.length
+    && value.finalSubmissions.every(isFinalSubmission)
+    && typeof value.showCorrectOverlay === 'boolean'
+    && typeof value.isRulesInfoUnlocked === 'boolean'
+    && typeof value.isAdditionalRuleUnlocked === 'boolean'
+    && typeof value.isSingleVisualizationRuleUnlocked === 'boolean'
+    && typeof value.isResubmissionRuleUnlocked === 'boolean'
+    && typeof value.showRulesInfoPrompt === 'boolean'
+    && typeof value.hasShownStepOSearchHint === 'boolean'
+    && typeof value.isStepOSearchSolved === 'boolean'
+    && (value.stepOSearchHintStartedAt === null || typeof value.stepOSearchHintStartedAt === 'number')
+    && validTabGuide
+    && typeof value.hasStartedTabGuide === 'boolean'
+    && typeof value.isPuzzleSolvedPending === 'boolean'
+    && typeof value.isImageCollapsed === 'boolean'
+    && isStringArray(value.readPartnerMessages)
+    && isStringArray(value.unlockedPhotos)
+    && validPhotoFiles
+    && isStringArray(value.newPhotos)
+    && isCutInLines(value.cutInLines)
+    && typeof value.cutInIndex === 'number'
+    && Number.isInteger(value.cutInIndex)
+    && value.cutInIndex >= 0
+    && (value.cutInLines.length === 0 ? value.cutInIndex === 0 : value.cutInIndex < value.cutInLines.length)
+    && validPendingCutIn
+    && typeof value.applyLastStepPhotoUpdateAfterCutIn === 'boolean'
+    && typeof value.unlockSingleVisualizationRuleAfterCutIn === 'boolean'
+    && validCutInLog
+    && isStringArray(value.solvedPartnerQuestions)
+  );
 };
 
 
@@ -120,10 +248,12 @@ export default function GameInterface() {
   const [showRulesInfo, setShowRulesInfo] = useState(false);
   const [isRulesInfoUnlocked, setIsRulesInfoUnlocked] = useState(false);
   const [isAdditionalRuleUnlocked, setIsAdditionalRuleUnlocked] = useState(false);
+  const [isSingleVisualizationRuleUnlocked, setIsSingleVisualizationRuleUnlocked] = useState(false);
   const [isResubmissionRuleUnlocked, setIsResubmissionRuleUnlocked] = useState(false);
   const [showRulesInfoPrompt, setShowRulesInfoPrompt] = useState(false);
-  const [hasShownStepESearchHint, setHasShownStepESearchHint] = useState(false);
-  const [isStepESearchSolved, setIsStepESearchSolved] = useState(false);
+  const [hasShownStepOSearchHint, setHasShownStepOSearchHint] = useState(false);
+  const [isStepOSearchSolved, setIsStepOSearchSolved] = useState(false);
+  const [stepOSearchHintStartedAt, setStepOSearchHintStartedAt] = useState<number | null>(null);
   const [tabGuideStep, setTabGuideStep] = useState<'photos' | 'photoA' | 'map' | null>(null);
   const [hasStartedTabGuide, setHasStartedTabGuide] = useState(false);
 
@@ -151,21 +281,21 @@ export default function GameInterface() {
 
   const [newPhotos, setNewPhotos] = useState<string[]>(GAME_STEPS[0].unlockedPhotos);
 
-  // ダイアログ状態
-  const [tutorialDialog, setTutorialDialog] = useState<DialogMessage>(null);
   const [cutInLines, setCutInLines] = useState<CutInLine[]>(CUT_IN_LINES.tutorialStart);
   const [cutInIndex, setCutInIndex] = useState(0);
   const [pendingCutIn, setPendingCutIn] = useState<PendingCutIn | null>(null);
+  const [applyLastStepPhotoUpdateAfterCutIn, setApplyLastStepPhotoUpdateAfterCutIn] = useState(false);
+  const [unlockSingleVisualizationRuleAfterCutIn, setUnlockSingleVisualizationRuleAfterCutIn] = useState(false);
   const [cutInLogByStep, setCutInLogByStep] = useState<Record<number, CutInLine[]>>({
     0: CUT_IN_LINES.tutorialStart,
   });
   const [selectedCutInLogStep, setSelectedCutInLogStep] = useState<number | null>(null);
-  const [showedSearchTutorialDialog, setShowedSearchTutorialDialog] = useState(false);
 
   // 相棒クイズ解答状態
   const [solvedPartnerQuestions, setSolvedPartnerQuestions] = useState<string[]>([]);
   const [partnerAnswerInput, setPartnerAnswerInput] = useState('');
   const [partnerAnswerError, setPartnerAnswerError] = useState('');
+  const [hasRestoredProgress, setHasRestoredProgress] = useState(false);
   
   const currentStepIndex = Math.max(GAME_STEPS.findIndex(s => s.id === currentStepId), 0);
   const currentStep = GAME_STEPS[currentStepIndex];
@@ -184,25 +314,165 @@ export default function GameInterface() {
   const finalSubmissionTargets = LAST_STEP_SUBMISSIONS;
 
   useEffect(() => {
+    const restoreTimer = window.setTimeout(() => {
+      const savedGame = loadSavedSession()?.game;
+      if (isSavedGameProgress(savedGame)) {
+        setCurrentStepId(savedGame.currentStepId);
+        setPhase(savedGame.phase);
+        setActiveTab(savedGame.activeTab);
+        setSearchLocation(savedGame.searchLocation);
+        setSearchPosition(savedGame.searchPosition);
+        setSearchItem(savedGame.searchItem);
+        setIsFollowUpPuzzle(savedGame.isFollowUpPuzzle);
+        setLastStep(savedGame.lastStep);
+        setLastStepOneName(savedGame.lastStepOneName);
+        setHotSpringAnswer(savedGame.hotSpringAnswer);
+        setFinalSubmissions(savedGame.finalSubmissions);
+        setShowCorrectOverlay(savedGame.showCorrectOverlay);
+        setIsRulesInfoUnlocked(savedGame.isRulesInfoUnlocked);
+        setIsAdditionalRuleUnlocked(savedGame.isAdditionalRuleUnlocked);
+        setIsSingleVisualizationRuleUnlocked(savedGame.isSingleVisualizationRuleUnlocked);
+        setIsResubmissionRuleUnlocked(savedGame.isResubmissionRuleUnlocked);
+        setShowRulesInfoPrompt(savedGame.showRulesInfoPrompt);
+        setHasShownStepOSearchHint(savedGame.hasShownStepOSearchHint);
+        setIsStepOSearchSolved(savedGame.isStepOSearchSolved);
+        setStepOSearchHintStartedAt(savedGame.stepOSearchHintStartedAt);
+        setTabGuideStep(savedGame.tabGuideStep);
+        setHasStartedTabGuide(savedGame.hasStartedTabGuide);
+        setIsPuzzleSolvedPending(savedGame.isPuzzleSolvedPending);
+        setIsImageCollapsed(savedGame.isImageCollapsed);
+        setReadPartnerMessages(savedGame.readPartnerMessages);
+        setUnlockedPhotos(savedGame.unlockedPhotos);
+        setPhotoFiles(savedGame.photoFiles);
+        setNewPhotos(savedGame.newPhotos);
+        setCutInLines(savedGame.cutInLines);
+        setCutInIndex(savedGame.cutInIndex);
+        setPendingCutIn(savedGame.pendingCutIn);
+        setApplyLastStepPhotoUpdateAfterCutIn(savedGame.applyLastStepPhotoUpdateAfterCutIn);
+        setUnlockSingleVisualizationRuleAfterCutIn(savedGame.unlockSingleVisualizationRuleAfterCutIn);
+        setCutInLogByStep(savedGame.cutInLogByStep);
+        setSolvedPartnerQuestions(savedGame.solvedPartnerQuestions);
+      }
+      setHasRestoredProgress(true);
+    }, 0);
+
+    return () => window.clearTimeout(restoreTimer);
+  }, []);
+
+  useEffect(() => {
+    if (!hasRestoredProgress) return;
+
+    saveGameProgress({
+      currentStepId,
+      phase,
+      activeTab,
+      searchLocation,
+      searchPosition,
+      searchItem,
+      isFollowUpPuzzle,
+      lastStep,
+      lastStepOneName,
+      hotSpringAnswer,
+      finalSubmissions,
+      showCorrectOverlay,
+      isRulesInfoUnlocked,
+      isAdditionalRuleUnlocked,
+      isSingleVisualizationRuleUnlocked,
+      isResubmissionRuleUnlocked,
+      showRulesInfoPrompt,
+      hasShownStepOSearchHint,
+      isStepOSearchSolved,
+      stepOSearchHintStartedAt,
+      tabGuideStep,
+      hasStartedTabGuide,
+      isPuzzleSolvedPending,
+      isImageCollapsed,
+      readPartnerMessages,
+      unlockedPhotos,
+      photoFiles,
+      newPhotos,
+      cutInLines,
+      cutInIndex,
+      pendingCutIn,
+      applyLastStepPhotoUpdateAfterCutIn,
+      unlockSingleVisualizationRuleAfterCutIn,
+      cutInLogByStep,
+      solvedPartnerQuestions,
+    } satisfies SavedGameProgress);
+  }, [
+    activeTab,
+    applyLastStepPhotoUpdateAfterCutIn,
+    cutInIndex,
+    cutInLines,
+    cutInLogByStep,
+    currentStepId,
+    finalSubmissions,
+    hasRestoredProgress,
+    hasShownStepOSearchHint,
+    hasStartedTabGuide,
+    hotSpringAnswer,
+    isAdditionalRuleUnlocked,
+    isFollowUpPuzzle,
+    isImageCollapsed,
+    isPuzzleSolvedPending,
+    isResubmissionRuleUnlocked,
+    isRulesInfoUnlocked,
+    isSingleVisualizationRuleUnlocked,
+    isStepOSearchSolved,
+    lastStep,
+    lastStepOneName,
+    newPhotos,
+    pendingCutIn,
+    phase,
+    photoFiles,
+    readPartnerMessages,
+    searchItem,
+    searchLocation,
+    searchPosition,
+    showCorrectOverlay,
+    showRulesInfoPrompt,
+    solvedPartnerQuestions,
+    stepOSearchHintStartedAt,
+    tabGuideStep,
+    unlockSingleVisualizationRuleAfterCutIn,
+    unlockedPhotos,
+  ]);
+
+  useEffect(() => {
+    if (!hasRestoredProgress) return;
     if (
       phase !== 'search'
-      || currentStep.id !== 2
-      || hasShownStepESearchHint
-      || isStepESearchSolved
+      || currentStep.id !== 3
+      || hasShownStepOSearchHint
+      || isStepOSearchSolved
     ) return;
 
+    if (stepOSearchHintStartedAt === null) {
+      const initializeTimer = window.setTimeout(() => setStepOSearchHintStartedAt(Date.now()), 0);
+      return () => window.clearTimeout(initializeTimer);
+    }
+
+    const remainingTime = Math.max(0, stepOSearchHintStartedAt + 20_000 - Date.now());
     const timerId = window.setTimeout(() => {
-      setHasShownStepESearchHint(true);
-      setCutInLines(CUT_IN_LINES.stepESearchHint);
+      setHasShownStepOSearchHint(true);
+      setCutInLines(CUT_IN_LINES.stepOSearchHint);
       setCutInIndex(0);
       setCutInLogByStep(prev => ({
         ...prev,
-        [currentStepIndex]: [...(prev[currentStepIndex] || []), ...CUT_IN_LINES.stepESearchHint],
+        [currentStepIndex]: [...(prev[currentStepIndex] || []), ...CUT_IN_LINES.stepOSearchHint],
       }));
-    }, 60_000);
+    }, remainingTime);
 
     return () => window.clearTimeout(timerId);
-  }, [currentStep.id, currentStepIndex, hasShownStepESearchHint, isStepESearchSolved, phase]);
+  }, [
+    currentStep.id,
+    currentStepIndex,
+    hasRestoredProgress,
+    hasShownStepOSearchHint,
+    isStepOSearchSolved,
+    phase,
+    stepOSearchHintStartedAt,
+  ]);
 
   const getPartnerEventKey = (stepId: number, eventIndex: number) => `${stepId}_${eventIndex}`;
 
@@ -264,15 +534,32 @@ export default function GameInterface() {
     setPhase('search');
     setIsPuzzleSolvedPending(false);
     setIsImageCollapsed(true);
-    setUnlockedPhotos(prev => Array.from(new Set([...prev, 'お'])));
-    setPhotoFiles(prev => ({ ...prev, お: 'お' }));
-    setNewPhotos(['お']);
     setActivePartnerMessage(null);
     setActiveTab('main');
     setErrorMsg('');
     setIsResubmissionRuleUnlocked(true);
     setShowRulesInfoPrompt(true);
+    setApplyLastStepPhotoUpdateAfterCutIn(true);
     showCorrectThenCutIn(CUT_IN_LINES.lastStepStart, currentStepIndex);
+  };
+
+  const applyLastStepStartPhotoUpdate = () => {
+    const newlyUnlocked = LAST_STEP_START_PHOTO_UPDATE.unlockedPhotos || [];
+    const updatedPhotos = LAST_STEP_START_PHOTO_UPDATE.updatedPhotos || {};
+    const newlyUpdated = Object.keys(updatedPhotos);
+
+    setUnlockedPhotos(prev => Array.from(new Set([...prev, ...newlyUnlocked])));
+    setPhotoFiles(prev => {
+      const next = { ...prev };
+      newlyUnlocked.forEach(photo => {
+        if (!next[photo]) next[photo] = photo;
+      });
+      Object.entries(updatedPhotos).forEach(([photo, filename]) => {
+        next[photo] = filename;
+      });
+      return next;
+    });
+    setNewPhotos([...newlyUnlocked, ...newlyUpdated]);
   };
 
   const closeCorrectOverlay = () => {
@@ -285,6 +572,15 @@ export default function GameInterface() {
 
   const advanceCutIn = () => {
     if (cutInIndex >= cutInLines.length - 1) {
+      if (applyLastStepPhotoUpdateAfterCutIn) {
+        applyLastStepStartPhotoUpdate();
+        setApplyLastStepPhotoUpdateAfterCutIn(false);
+      }
+      if (unlockSingleVisualizationRuleAfterCutIn) {
+        setIsSingleVisualizationRuleUnlocked(true);
+        setShowRulesInfoPrompt(true);
+        setUnlockSingleVisualizationRuleAfterCutIn(false);
+      }
       setCutInLines([]);
       setCutInIndex(0);
       return;
@@ -344,11 +640,6 @@ export default function GameInterface() {
       return;
     }
 
-    // チュートリアルの場合、検索のヒントダイアログを表示
-    if (currentStepId === 0 && !showedSearchTutorialDialog) {
-      setTutorialDialog('tutorial_search');
-      setShowedSearchTutorialDialog(true);
-    }
   };
 
   const proceedAfterPuzzleSolved = () => {
@@ -401,8 +692,8 @@ export default function GameInterface() {
     if (searchLocation === location && searchPosition === position && searchItem.trim() === item) {
       setErrorMsg('');
       setSearchItem('');
-      if (currentStep.id === 2) {
-        setIsStepESearchSolved(true);
+      if (currentStep.id === 3) {
+        setIsStepOSearchSolved(true);
       }
       // 次のステップへ
       if (currentStepIndex < GAME_STEPS.length - 1) {
@@ -448,8 +739,9 @@ export default function GameInterface() {
         if (currentStep.id === 2) {
           startCutIn(CUT_IN_LINES.stepESearchSolved, currentStepIndex);
         }
-        if (nextStep.memos?.length) {
-          setTutorialDialog('new_memo_unlocked');
+        if (currentStep.id === 3) {
+          setUnlockSingleVisualizationRuleAfterCutIn(true);
+          startCutIn(CUT_IN_LINES.stepOSearchSolved, currentStepIndex);
         }
       } else {
         startLastStep();
@@ -495,8 +787,8 @@ export default function GameInterface() {
       setHotSpringAnswer('');
       setLastStep(3);
       setUnlockedPhotos(prev => Array.from(new Set([...prev, 'き'])));
-      setPhotoFiles(prev => ({ ...prev, き: 'き' }));
-      setNewPhotos(['き']);
+      setPhotoFiles(prev => ({ ...prev, き: 'き', E: 'E4' }));
+      setNewPhotos(['き', 'E']);
       showCorrectThenCutIn(CUT_IN_LINES.lastStepThreeStart, currentStepIndex);
       return;
     }
@@ -537,6 +829,10 @@ export default function GameInterface() {
     : activeCutInLine?.speaker === '自分'
       ? 'bg-cyan-500 text-slate-950'
       : 'bg-indigo-500 text-white';
+
+  if (!hasRestoredProgress) {
+    return <div className="mx-auto h-[100dvh] max-w-md bg-slate-950" />;
+  }
 
   return (
     <div className="flex flex-col h-[100dvh] max-w-md mx-auto bg-slate-900 relative overflow-hidden">
@@ -1206,7 +1502,9 @@ export default function GameInterface() {
                   {submittedAssumption && (
                     <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm">
                       <span className="text-slate-500 text-xs block">提出した想定のもの</span>
-                      <span className="text-slate-200">{submittedAssumption.originalSubmittedItem}</span>
+                      <span className="text-slate-200">
+                        {submittedAssumption.logDisplayItem ?? submittedAssumption.originalSubmittedItem}
+                      </span>
                     </div>
                   )}
                   {step.partnerEvents?.map((event, eventIndex) => {
@@ -1395,35 +1693,6 @@ export default function GameInterface() {
         </div>
       )}
       
-      {/* Tutorial Dialog */}
-      {tutorialDialog && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setTutorialDialog(null)}
-        >
-          <div
-            className="bg-slate-800 border-2 border-blue-500/50 rounded-2xl p-6 max-w-xs mx-4 shadow-2xl animate-in scale-in-95 duration-300"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {tutorialDialog === 'tutorial_photos' && (
-              <>
-                <div className="mb-4">
-                  <p className="text-slate-100 text-base leading-relaxed">
-                    写真タブを確認してみよう。謎に登場したイラストが可視化されたことが確認できるぞ！
-                  </p>
-                </div>
-                <button
-                  onClick={() => setTutorialDialog(null)}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-2 rounded-lg hover:from-blue-500 hover:to-indigo-500 active:scale-95 transition-all"
-                >
-                  OK
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
       {showRulesInfo && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in duration-200"
@@ -1454,13 +1723,13 @@ export default function GameInterface() {
                 <p className="mt-2 text-slate-300">※謎のイラスト内に登場したアイテムしか視認できない</p>
               </section>
 
-              <section>
+              {/* <section>
                 <h3 className="mb-2 font-bold text-amber-300">アイテム提出方法</h3>
                 <ol className="list-decimal space-y-1 pl-5">
                   <li>各場所の謎に正解するとお題が出題される</li>
                   <li>お題に沿ったアイテムの場所を特定すると、提出場所へ自動で転送される</li>
                 </ol>
-              </section>
+              </section> */}
 
               <section>
                 <h3 className="mb-2 font-bold text-indigo-300">視認できないアイテムを提出するには？</h3>
@@ -1469,11 +1738,20 @@ export default function GameInterface() {
                 <p className="mt-2 text-slate-300">※入れ子構造の中身だけを直接取り出せないが、対象となったアイテムの中身全てが転送される</p>
               </section>
 
-              {isAdditionalRuleUnlocked && (
+              {(isAdditionalRuleUnlocked || isSingleVisualizationRuleUnlocked) && (
                 <section className="rounded-xl border border-rose-400/30 bg-rose-950/20 p-3">
                   <h3 className="mb-2 font-bold text-rose-300">追加で判明したルール</h3>
-                  <p>謎の回答が青くなった場合、イラストに登場していなくても可視化できる状態となったことを示す</p>
-                  <p className="mt-2 text-slate-300">※青くなる条件は、ゲームフィールドに存在していること</p>
+                  {isAdditionalRuleUnlocked && (
+                    <>
+                      <p>謎の回答が青くなった場合、イラストに登場していなくても可視化できる状態となったことを示す</p>
+                      <p className="mt-2 text-slate-300">※青くなる条件は、ゲームフィールドに存在していること</p>
+                    </>
+                  )}
+                  {isSingleVisualizationRuleUnlocked && (
+                    <p className={`${isAdditionalRuleUnlocked ? 'mt-3 border-t border-rose-400/20 pt-3' : ''}`}>
+                      種類・大きさ・名称の全て一致するものがある場合、そのうち一つしか可視化されない
+                    </p>
+                  )}
                 </section>
               )}
 
