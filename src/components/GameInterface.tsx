@@ -120,6 +120,7 @@ export default function GameInterface() {
   const [showRulesInfo, setShowRulesInfo] = useState(false);
   const [isRulesInfoUnlocked, setIsRulesInfoUnlocked] = useState(false);
   const [isAdditionalRuleUnlocked, setIsAdditionalRuleUnlocked] = useState(false);
+  const [isResubmissionRuleUnlocked, setIsResubmissionRuleUnlocked] = useState(false);
   const [showRulesInfoPrompt, setShowRulesInfoPrompt] = useState(false);
   const [hasShownStepESearchHint, setHasShownStepESearchHint] = useState(false);
   const [isStepESearchSolved, setIsStepESearchSolved] = useState(false);
@@ -269,6 +270,8 @@ export default function GameInterface() {
     setActivePartnerMessage(null);
     setActiveTab('main');
     setErrorMsg('');
+    setIsResubmissionRuleUnlocked(true);
+    setShowRulesInfoPrompt(true);
     showCorrectThenCutIn(CUT_IN_LINES.lastStepStart, currentStepIndex);
   };
 
@@ -556,7 +559,9 @@ export default function GameInterface() {
               <div className="absolute right-4 bottom-20 z-30 flex flex-col items-end gap-2">
                 {showRulesInfoPrompt && (
                   <div className="max-w-56 rounded-xl border border-cyan-300/40 bg-slate-800/95 px-3 py-2 text-xs font-bold leading-relaxed text-cyan-50 shadow-lg shadow-cyan-950/40 animate-pulse">
-                    {isAdditionalRuleUnlocked
+                    {isResubmissionRuleUnlocked
+                      ? '再提出時のルールが追加されました。informationを確認してください。'
+                      : isAdditionalRuleUnlocked
                       ? '追加で判明したルールがあります。informationを確認してください。'
                       : 'ゲームのルールはいつでも確認できます。まずはここを押してみましょう。'}
                   </div>
@@ -1469,6 +1474,16 @@ export default function GameInterface() {
                   <h3 className="mb-2 font-bold text-rose-300">追加で判明したルール</h3>
                   <p>謎の回答が青くなった場合、イラストに登場していなくても可視化できる状態となったことを示す</p>
                   <p className="mt-2 text-slate-300">※青くなる条件は、ゲームフィールドに存在していること</p>
+                </section>
+              )}
+
+              {isResubmissionRuleUnlocked && (
+                <section className="rounded-xl border border-amber-400/30 bg-amber-950/20 p-3">
+                  <h3 className="mb-2 font-bold text-amber-300">再提出時のルール</h3>
+                  <ul className="list-disc space-y-1 pl-5">
+                    <li>転送対象の名称指定が必須となる</li>
+                    <li>指定位置に複数個同じものがあった場合、複数全て転送される</li>
+                  </ul>
                 </section>
               )}
             </div>

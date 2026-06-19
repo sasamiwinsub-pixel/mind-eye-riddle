@@ -3,17 +3,18 @@
 import { useState } from 'react';
 import GameInterface from '@/components/GameInterface';
 import Intro from '@/components/Intro';
+import TitleScreen from '@/components/TitleScreen';
+
+type Screen = 'title' | 'intro' | 'game';
 
 export default function Home() {
-  const [gameStarted, setGameStarted] = useState(false);
+  const [screen, setScreen] = useState<Screen>('title');
 
   return (
     <main className="min-h-screen bg-black">
-      {gameStarted ? (
-        <GameInterface />
-      ) : (
-        <Intro onStartGame={() => setGameStarted(true)} />
-      )}
+      {screen === 'title' && <TitleScreen onStart={() => setScreen('intro')} />}
+      {screen === 'intro' && <Intro onStartGame={() => setScreen('game')} />}
+      {screen === 'game' && <GameInterface />}
     </main>
   );
 }
