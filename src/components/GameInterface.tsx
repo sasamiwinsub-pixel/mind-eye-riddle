@@ -123,6 +123,18 @@ const CUT_IN_LINES = {
 
 const getLastStepLogIndex = (step: 1 | 2 | 3) => GAME_STEPS.length + step - 1;
 
+const highlightedCutInText = 'まさか募金箱のお金を移動させるなんて...。立山君はこういう時に頼もしいけど、友人の横山としては倫理観が心配だね';
+
+const renderCutInText = (text: string) => {
+  if (text !== highlightedCutInText) return text;
+
+  return text.split(/(立山|横山)/g).map((part, index) => (
+    part === '立山' || part === '横山'
+      ? <span key={`${part}-${index}`} className="font-black text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.8)]">{part}</span>
+      : part
+  ));
+};
+
 const normalizeTextAnswer = (value: string) => value
   .normalize('NFKC')
   .trim()
@@ -1789,7 +1801,7 @@ export default function GameInterface() {
                 </div>
               </div>
               <p className="text-xl font-bold leading-relaxed text-white drop-shadow">
-                {activeCutInLine.text}
+                {renderCutInText(activeCutInLine.text)}
               </p>
               <p className="mt-4 text-right text-xs font-bold tracking-widest text-white/50">
                 TAP TO CONTINUE {cutInIndex + 1}/{cutInLines.length}
@@ -1866,8 +1878,8 @@ export default function GameInterface() {
             <div className="space-y-5 text-sm leading-relaxed">
               <section>
                 <h3 className="mb-2 font-bold text-emerald-300">クリア条件</h3>
-                <p>マップ上の「あ」〜「け」の全ての場所に対して、お題のアイテムを提出すること</p>
-                <p className="mt-2 text-slate-300">※謎のイラスト内に登場したアイテムしか視認できない</p>
+                <p>マップ上の「あ」〜「け」の全てにお題のアイテムを提出する</p>
+                <p className="mt-2 text-slate-300">※謎のイラストで登場したアイテムしか視認できない</p>
               </section>
 
               {/* <section>
@@ -1880,9 +1892,9 @@ export default function GameInterface() {
 
               <section>
                 <h3 className="mb-2 font-bold text-indigo-300">視認できないアイテムを提出するには？</h3>
-                <p>視認できているアイテムを基準に、写真上でどの位置にあるかを特定すると、最も近いアイテムが一つだけ提出される</p>
+                <p>視認できているアイテムを基準に、写真上でどの位置にあるかを指定すると、最も近いアイテムが一つだけ提出される</p>
                 <p className="mt-2 text-slate-300">※位置の基準に選んだアイテムは転送できない</p>
-                <p className="mt-2 text-slate-300">※入れ子構造の中身だけを直接取り出せないが、対象となったアイテムの中身全てが転送される</p>
+                <p className="mt-2 text-slate-300">※入れ子構造の中身だけを直接取り出せないが、対象となったアイテムの中身丸ごとが転送される</p>
               </section>
 
               {(isAdditionalRuleUnlocked || isSingleVisualizationRuleUnlocked) && (
@@ -1890,7 +1902,7 @@ export default function GameInterface() {
                   <h3 className="mb-2 font-bold text-rose-300">追加で判明したルール</h3>
                   {isAdditionalRuleUnlocked && (
                     <>
-                      <p>謎の回答が青くなった場合、イラストに登場していなくても可視化できる状態となったことを示す</p>
+                      <p>謎の回答が青くなった場合、回答した名称のものが可視化できる状態となったことを示す</p>
                       <p className="mt-2 text-slate-300">※青くなる条件は、ゲームフィールドに存在していること</p>
                     </>
                   )}
@@ -1906,8 +1918,8 @@ export default function GameInterface() {
                 <section className="rounded-xl border border-amber-400/30 bg-amber-950/20 p-3">
                   <h3 className="mb-2 font-bold text-amber-300">再提出時のルール</h3>
                   <ul className="list-disc space-y-1 pl-5">
-                    <li>転送対象の名称指定が必須となる</li>
-                    <li>指定位置に複数個同じものがあった場合、複数全て転送される</li>
+                    <li>転送したいものの名称指定が必須となる</li>
+                    <li>複数個同じものがあった場合、全て転送される</li>
                   </ul>
                 </section>
               )}
