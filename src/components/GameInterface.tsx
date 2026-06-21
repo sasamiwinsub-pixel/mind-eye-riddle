@@ -54,6 +54,7 @@ type SavedGameProgress = {
   unlockedPhotos: string[];
   photoFiles: Record<string, string>;
   newPhotos: string[];
+  photoTabHasUnreadUpdate?: boolean;
   cutInLines: CutInLine[];
   cutInIndex: number;
   pendingCutIn: PendingCutIn | null;
@@ -226,6 +227,7 @@ const isSavedGameProgress = (value: unknown): value is SavedGameProgress => {
     && isStringArray(value.unlockedPhotos)
     && validPhotoFiles
     && isStringArray(value.newPhotos)
+    && (value.photoTabHasUnreadUpdate === undefined || typeof value.photoTabHasUnreadUpdate === 'boolean')
     && isCutInLines(value.cutInLines)
     && typeof value.cutInIndex === 'number'
     && Number.isInteger(value.cutInIndex)
@@ -312,6 +314,9 @@ export default function GameInterface() {
   });
 
   const [newPhotos, setNewPhotos] = useState<string[]>(GAME_STEPS[0].unlockedPhotos);
+  const [photoTabHasUnreadUpdate, setPhotoTabHasUnreadUpdate] = useState(
+    GAME_STEPS[0].unlockedPhotos.length > 0,
+  );
 
   const [cutInLines, setCutInLines] = useState<CutInLine[]>(CUT_IN_LINES.tutorialStart);
   const [cutInIndex, setCutInIndex] = useState(0);
@@ -379,6 +384,10 @@ export default function GameInterface() {
         setUnlockedPhotos(savedGame.unlockedPhotos);
         setPhotoFiles(savedGame.photoFiles);
         setNewPhotos(savedGame.newPhotos);
+        setPhotoTabHasUnreadUpdate(
+          savedGame.photoTabHasUnreadUpdate
+            ?? (savedGame.newPhotos.length > 0 && savedGame.activeTab !== 'photos'),
+        );
         setCutInLines(savedGame.cutInLines);
         setCutInIndex(savedGame.cutInIndex);
         setPendingCutIn(savedGame.pendingCutIn);
@@ -428,6 +437,7 @@ export default function GameInterface() {
       unlockedPhotos,
       photoFiles,
       newPhotos,
+      photoTabHasUnreadUpdate,
       cutInLines,
       cutInIndex,
       pendingCutIn,
@@ -465,6 +475,7 @@ export default function GameInterface() {
     pendingCutIn,
     phase,
     photoFiles,
+    photoTabHasUnreadUpdate,
     readPartnerMessages,
     searchItem,
     searchLocation,
@@ -609,6 +620,9 @@ export default function GameInterface() {
       return next;
     });
     setNewPhotos([...newlyUnlocked, ...newlyUpdated]);
+    if (newlyUnlocked.length > 0 || newlyUpdated.length > 0) {
+      setPhotoTabHasUnreadUpdate(true);
+    }
   };
 
   const closeCorrectOverlay = () => {
@@ -683,6 +697,9 @@ export default function GameInterface() {
     });
 
     setNewPhotos([...newlyUnlocked, ...newlyUnlockedAtTheme, ...newlyUpdated]);
+    if (newlyUnlocked.length > 0 || newlyUnlockedAtTheme.length > 0 || newlyUpdated.length > 0) {
+      setPhotoTabHasUnreadUpdate(true);
+    }
 
     if (currentStepIndex === GAME_STEPS.length - 1) {
       startLastStep();
@@ -736,9 +753,17 @@ export default function GameInterface() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const { location, position, item } = currentStep.searchTarget;
+    const acceptedTargets = [
+      currentStep.searchTarget,
+      ...(currentStep.acceptedSearchTargets || []),
+    ];
+    const isCorrectTarget = acceptedTargets.some(({ location, position, item }) => (
+      searchLocation === location
+      && searchPosition === position
+      && searchItem.trim() === item
+    ));
     
-    if (searchLocation === location && searchPosition === position && searchItem.trim() === item) {
+    if (isCorrectTarget) {
       setErrorMsg('');
       setSearchItem('');
       if (currentStep.id === 3) {
@@ -775,6 +800,9 @@ export default function GameInterface() {
 
         // 新規解放された写真 ＋ 更新された写真 を「NEW」として扱う
         setNewPhotos([...newlyUnlocked, ...newlyUpdated]);
+        if (newlyUnlocked.length > 0 || newlyUpdated.length > 0) {
+          setPhotoTabHasUnreadUpdate(true);
+        }
         
         // メインタブに戻し、相棒のメッセージもリセットする
         setActivePartnerMessage(null);
@@ -842,6 +870,7 @@ export default function GameInterface() {
       setUnlockedPhotos(prev => Array.from(new Set([...prev, 'き'])));
       setPhotoFiles(prev => ({ ...prev, き: 'き', E: 'E4' }));
       setNewPhotos(['き', 'E']);
+      setPhotoTabHasUnreadUpdate(true);
       showCorrectThenCutIn(CUT_IN_LINES.lastStepThreeStart, getLastStepLogIndex(3), true);
       return;
     }
@@ -1732,6 +1761,7 @@ export default function GameInterface() {
         <button 
           onClick={() => {
             setActiveTab('photos');
+            setPhotoTabHasUnreadUpdate(false);
             if (tabGuideStep === 'photos') {
               setTabGuideStep('photoA');
             }
@@ -1747,7 +1777,7 @@ export default function GameInterface() {
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            {newPhotos.length > 0 && activeTab !== 'photos' && (
+            {photoTabHasUnreadUpdate && activeTab !== 'photos' && (
               <span className="absolute -top-1 -right-1 flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border border-slate-900"></span>

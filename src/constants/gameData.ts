@@ -18,6 +18,11 @@ export interface StepData {
     position: string; // 上, 下, 左, 右, 中,それ自身
     item: string; // アイテム名
   };
+  acceptedSearchTargets?: {
+    location: string;
+    position: string;
+    item: string;
+  }[];
   unlockedPhotos: string[]; // このステップで新規解放されるフィールド写真
   unlockedPhotosAtTheme?: string[]; // お題表示時に新規解放されるフィールド写真
   updatedPhotosAtTheme?: Record<string, string>; // お題表示時に既存の写真を差し替える (例: { 'A': 'A_v2' })
@@ -102,6 +107,7 @@ export const GAME_STEPS: StepData[] = [
     themeText: '足が偶数本あるもの',
     puzzleAnswer: 'かけじく',
     acceptedPuzzleAnswers: ['掛け軸', '掛軸', 'カケジク'],
+    showBlueAnswerEffect: true,
     searchTarget: { location: 'B', position: '下', item: '時計' },
     unlockedPhotos: ['I'],
     updatedPhotosAtTheme: {'A': 'A2'}, // ステップ1-5のお題が出たタイミングで、写真AをA3に差し替える    
@@ -181,6 +187,7 @@ export const GAME_STEPS: StepData[] = [
     acceptedPuzzleAnswers: ['台', '大', 'ダイ'],
     showBlueAnswerEffect: true,
     searchTarget: { location: 'G', position: '上', item: '浴衣' },
+    acceptedSearchTargets: [{ location: 'G', position: '中', item: '浴衣' }],
     unlockedPhotos: ['H'],
     updatedPhotosAtPuzzle: { 'E': 'E2', },
     updatedPhotosAtTheme: {'A': 'A4', 'F': 'F3', 'I': 'I2' }, 
