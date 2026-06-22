@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { FINAL_STEP_SUBMISSIONS, GAME_STEPS, LAST_STEP_START_PHOTO_UPDATE, LAST_STEP_SUBMISSIONS, LOCATIONS, POSITIONS } from '@/constants/gameData';
+import { BONUS_STEP_SUBMISSIONS, FINAL_STEP_SUBMISSIONS, GAME_STEPS, LAST_STEP_START_PHOTO_UPDATE, LAST_STEP_SUBMISSIONS, LOCATIONS, POSITIONS, type LastStepSubmissionData } from '@/constants/gameData';
 import { loadSavedSession, saveGameProgress } from '@/lib/gameProgressStorage';
 
 type Tab = 'main' | 'map' | 'photos' | 'log';
@@ -103,7 +103,7 @@ const CUT_IN_LINES = {
     { speaker: '相棒', text: 'あと一つ提出するだけだ！' },
     { speaker: 'ゲームマスター', text: '残念ですが、提出場所「お」が、たった今正解から不正解判定に変わりました' },
     { speaker: '相棒', text: '何だって！？謎の球体が一度正解になったのに、不正解に変わったの...か？ひとまず「お」の場所を見に行ってみるよ' },
-    { speaker: 'ゲームマスター', text: '一度不正解となったため、全てを再提出してもらいます。戻せるものは元の位置に戻してあるのでやり直しです。ただし、別解があるお題では別解での回答をしてください。さらに、新たな制約が追加されました' },
+    { speaker: 'ゲームマスター', text: '一度不正解となったため、指定する二つを再提出してもらいます。戻せるものは元の位置に戻してあるのでやり直しです。さらに、新たな制約が追加されました' },
     { speaker: 'ゲームマスター', text: 'その制約とは、転送対象の名称の指定の必須化。名称を指定した場合、該当するものが同時に複数個転送されます' },
     { speaker: 'ゲームマスター', text: '我々はフェアさを大事にしているので、一つだけアドバイスを差し上げましょう。「お」を確認した後は、ひとまずお題「アルミ」を再提出してみましょう' },
   ],
@@ -208,7 +208,7 @@ const isSavedGameProgress = (value: unknown): value is SavedGameProgress => {
     && (value.lastStepTwoAnswerLog === null || typeof value.lastStepTwoAnswerLog === 'string')
     && typeof value.isGameCleared === 'boolean'
     && Array.isArray(value.finalSubmissions)
-    && value.finalSubmissions.length === FINAL_STEP_SUBMISSIONS.length
+    && (value.finalSubmissions.length === FINAL_STEP_SUBMISSIONS.length || value.finalSubmissions.length === 8)
     && value.finalSubmissions.every(isFinalSubmission)
     && typeof value.showCorrectOverlay === 'boolean'
     && typeof value.isRulesInfoUnlocked === 'boolean'
@@ -241,8 +241,8 @@ const isSavedGameProgress = (value: unknown): value is SavedGameProgress => {
   );
 };
 
-const createInitialFinalSubmissions = (): FinalSubmission[] => (
-  FINAL_STEP_SUBMISSIONS.map(submission => {
+const createInitialSubmissions = (targets: LastStepSubmissionData[]): FinalSubmission[] => (
+  targets.map(submission => {
     const originalStep = GAME_STEPS[submission.stepIndex];
     const isSameAsOriginal = !submission.isPending
       && submission.originalSubmittedItem === submission.retryItem;
@@ -275,7 +275,11 @@ export default function GameInterface() {
   const [lastStepOneAnswerLog, setLastStepOneAnswerLog] = useState<string | null>(null);
   const [lastStepTwoAnswerLog, setLastStepTwoAnswerLog] = useState<string | null>(null);
   const [isGameCleared, setIsGameCleared] = useState(false);
-  const [finalSubmissions, setFinalSubmissions] = useState<FinalSubmission[]>(createInitialFinalSubmissions);
+  const [finalSubmissions, setFinalSubmissions] = useState<FinalSubmission[]>(() => createInitialSubmissions(FINAL_STEP_SUBMISSIONS));
+  const [showBonus, setShowBonus] = useState(false);
+  const [bonusIndex, setBonusIndex] = useState(0);
+  const [bonusSubmissions, setBonusSubmissions] = useState<FinalSubmission[]>(() => createInitialSubmissions(BONUS_STEP_SUBMISSIONS));
+  const [bonusMessage, setBonusMessage] = useState('');
 
   const [errorMsg, setErrorMsg] = useState('');
   const [showCorrectOverlay, setShowCorrectOverlay] = useState(false);
@@ -366,7 +370,11 @@ export default function GameInterface() {
         setLastStepOneAnswerLog(savedGame.lastStepOneAnswerLog);
         setLastStepTwoAnswerLog(savedGame.lastStepTwoAnswerLog);
         setIsGameCleared(savedGame.isGameCleared);
-        setFinalSubmissions(savedGame.finalSubmissions);
+        setFinalSubmissions(
+          savedGame.finalSubmissions.length === FINAL_STEP_SUBMISSIONS.length
+            ? savedGame.finalSubmissions
+            : [savedGame.finalSubmissions[4], savedGame.finalSubmissions[7]],
+        );
         setShowCorrectOverlay(savedGame.showCorrectOverlay);
         setIsRulesInfoUnlocked(savedGame.isRulesInfoUnlocked);
         setIsAdditionalRuleUnlocked(savedGame.isAdditionalRuleUnlocked);
@@ -839,6 +847,15 @@ export default function GameInterface() {
     }));
   };
 
+  const updateBonusSubmission = (field: keyof FinalSubmission, value: string) => {
+    setBonusSubmissions(prev => prev.map((submission, index) => (
+      index === bonusIndex
+        ? { ...submission, [field]: value, ...(field === 'location' ? { item: '' } : {}) }
+        : submission
+    )));
+    setBonusMessage('');
+  };
+
   const handleLastStepOneSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -903,6 +920,35 @@ export default function GameInterface() {
     }
   };
 
+  const handleBonusSubmission = (e: React.FormEvent) => {
+    e.preventDefault();
+    const target = BONUS_STEP_SUBMISSIONS[bonusIndex];
+    const submission = bonusSubmissions[bonusIndex];
+    const matchesAcceptedTarget = target.acceptedTargets.some(acceptedTarget => (
+      submission.location === acceptedTarget.location
+      && submission.position === acceptedTarget.position
+      && submission.item === acceptedTarget.item
+    ));
+    const matchesName = matchesTextAnswer(submission.specifiedName, [
+      target.retryItem,
+      ...(target.acceptedRetryItems || []),
+    ]);
+
+    if (!matchesAcceptedTarget || !matchesName) {
+      setBonusMessage('提出内容が違います。これまでの記録を見直してみましょう。');
+      return;
+    }
+
+    if (bonusIndex === BONUS_STEP_SUBMISSIONS.length - 1) {
+      setBonusIndex(BONUS_STEP_SUBMISSIONS.length);
+      setBonusMessage('おまけの再提出をすべて完了しました！');
+      return;
+    }
+
+    setBonusIndex(index => index + 1);
+    setBonusMessage('正解です。次の提出へ進みます。');
+  };
+
   const activeCutInLine = cutInLines[cutInIndex] || null;
   const selectedCutInLogLines = selectedCutInLogStep !== null ? cutInLogByStep[selectedCutInLogStep] || [] : [];
   const selectedCutInLogTitle = selectedCutInLogStep === null
@@ -925,7 +971,69 @@ export default function GameInterface() {
     return <div className="mx-auto h-[100dvh] max-w-md bg-slate-950" />;
   }
 
-  if (isGameCleared) {
+  const renderBonusMain = () => {
+    const isBonusComplete = bonusIndex >= BONUS_STEP_SUBMISSIONS.length;
+    const target = isBonusComplete ? null : BONUS_STEP_SUBMISSIONS[bonusIndex];
+    const submission = isBonusComplete ? null : bonusSubmissions[bonusIndex];
+    const originalStep = target ? GAME_STEPS[target.stepIndex] : null;
+    const isSameAsOriginal = target
+      ? !target.isPending && target.originalSubmittedItem === target.retryItem
+      : false;
+    const configuredItems = target && submission
+      ? target.acceptedTargets
+        .filter(acceptedTarget => acceptedTarget.location === submission.location)
+        .map(acceptedTarget => acceptedTarget.item)
+      : [];
+    const availableItems = target && submission && originalStep
+      ? Array.from(new Set([
+        ...getAvailableItemsForLocation(submission.location),
+        ...configuredItems,
+        ...(submission.location === originalStep.searchTarget.location ? [originalStep.searchTarget.item] : []),
+      ]))
+      : [];
+
+    return (
+      <div className="flex min-h-full flex-col px-5 py-6 pb-28 text-slate-100">
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-black tracking-[0.3em] text-amber-300">BONUS</p>
+            <h1 className="mt-1 text-2xl font-black">残りの再提出</h1>
+          </div>
+          <button type="button" onClick={() => setShowBonus(false)} className="rounded-lg border border-slate-600 px-3 py-2 text-sm font-bold text-slate-200">
+            クリア画面へ
+          </button>
+        </div>
+
+        {isBonusComplete || !target || !submission || !originalStep ? (
+          <div className="my-auto rounded-2xl border border-amber-400/30 bg-amber-950/30 p-6 text-center">
+            <p className="text-xl font-black text-amber-200">おまけコンプリート</p>
+            <p className="mt-3 text-sm leading-relaxed text-slate-300">本編では使わなかった提出先も、すべて正しく再提出できました。</p>
+          </div>
+        ) : (
+          <form onSubmit={handleBonusSubmission} className="flex flex-col gap-4 rounded-2xl border border-amber-400/25 bg-slate-900/80 p-4 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-black">{originalStep.title}</h2>
+              <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-bold text-amber-300">{bonusIndex + 1} / {BONUS_STEP_SUBMISSIONS.length}</span>
+            </div>
+            <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3 text-xs leading-relaxed text-slate-300">
+              <div>お題：<span className="font-bold text-white">{originalStep.themeText}</span></div>
+              <div className="mt-1">ログで見えないが提出したもの：<span className="font-bold text-white">{target.logDisplayItem ?? target.originalSubmittedItem}</span></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label><span className="mb-1 block text-xs text-slate-400">場所</span><select value={submission.location} disabled={isSameAsOriginal} onChange={e => updateBonusSubmission('location', e.target.value)} className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3"><option value="">選択</option>{LOCATIONS.map(value => <option key={value}>{value}</option>)}</select></label>
+              <label><span className="mb-1 block text-xs text-slate-400">位置</span><select value={submission.position} disabled={isSameAsOriginal} onChange={e => updateBonusSubmission('position', e.target.value)} className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3">{POSITIONS.map(value => <option key={value}>{value}</option>)}</select></label>
+            </div>
+            <label><span className="mb-1 block text-xs text-slate-400">基準となるアイテム</span><select value={submission.item} disabled={isSameAsOriginal} onChange={e => updateBonusSubmission('item', e.target.value)} className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3"><option value="">選択してください</option>{availableItems.map(value => <option key={value}>{value}</option>)}</select></label>
+            <label><span className="mb-1 block text-xs font-bold text-amber-300">名称指定（必須）</span><input required value={submission.specifiedName} onChange={e => updateBonusSubmission('specifiedName', e.target.value)} className="w-full rounded-lg border border-amber-500/40 bg-slate-800 p-3" placeholder="転送するものの名称" /></label>
+            {bonusMessage && <p className="text-center text-sm font-bold text-amber-200">{bonusMessage}</p>}
+            <button type="submit" className="rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 py-3 font-bold text-white">この内容で提出する</button>
+          </form>
+        )}
+      </div>
+    );
+  }
+
+  if (isGameCleared && !showBonus) {
     return (
       <div className="relative mx-auto flex h-[100dvh] max-w-md flex-col overflow-y-auto bg-slate-950 px-6 py-8 text-slate-100 no-scrollbar">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -947,6 +1055,16 @@ export default function GameInterface() {
           <p className="mt-4 rounded-2xl border border-cyan-300/20 bg-slate-900/70 px-5 py-4 text-lg font-bold leading-relaxed text-cyan-50 shadow-xl backdrop-blur">
             心の眼で全ての謎を解き明かしました
           </p>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('main');
+              setShowBonus(true);
+            }}
+            className="mt-5 rounded-xl border border-amber-300/40 bg-amber-500/15 px-6 py-3 font-black text-amber-100 transition-colors hover:bg-amber-500/25"
+          >
+            おまけの再提出に挑戦する
+          </button>
         </main>
       </div>
     );
@@ -958,16 +1076,16 @@ export default function GameInterface() {
       {/* Header */}
       <header className="glass-panel py-3 px-4 flex justify-between items-center z-10">
         <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
-          {displayTitle}
+          {showBonus ? 'BONUS' : displayTitle}
         </h1>
         <div className="text-xs bg-slate-800 px-2 py-1 rounded-full border border-slate-700">
-          {lastStep > 0 ? `LAST ${lastStep} / 3` : `Step ${currentStepIndex} / ${GAME_STEPS.length - 1}`}
+          {showBonus ? `${Math.min(bonusIndex + 1, BONUS_STEP_SUBMISSIONS.length)} / ${BONUS_STEP_SUBMISSIONS.length}` : lastStep > 0 ? `LAST ${lastStep} / 3` : `Step ${currentStepIndex} / ${GAME_STEPS.length - 1}`}
         </div>
       </header>
 
       {/* Main Content Area */}
       <main className="relative min-h-0 flex-1 overflow-y-auto pb-24 no-scrollbar">
-        {activeTab === 'main' && (
+        {activeTab === 'main' && (showBonus ? renderBonusMain() : (
           <div className="flex min-h-full flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
             {isRulesInfoUnlocked && (
               <div className="absolute right-4 bottom-20 z-30 flex flex-col items-end gap-2">
@@ -1203,7 +1321,7 @@ export default function GameInterface() {
                     <div className="rounded-xl border border-rose-500/30 bg-rose-950/30 p-3 shadow-[0_0_18px_rgba(244,63,94,0.12)]">
                       <h3 className="text-sm font-bold text-rose-300">最終提出</h3>
                       <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                        これまでの提出を、通常選択と転送対象の名称指定を含めてもう一度すべて指定してください。
+                        指定された二つの提出を、転送対象の名称指定を含めてもう一度指定してください。
                       </p>
                     </div>
 
@@ -1361,7 +1479,7 @@ export default function GameInterface() {
               </div>
             </div>
           </div>
-        )}
+        ))}
 
         {activeTab === 'map' && (
           <div className="min-h-full px-4 pt-4 pb-28 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-300">

@@ -256,7 +256,7 @@ export const GAME_STEPS: StepData[] = [
   },
   {
     id: 7,
-    title: '提出場所：「け」',
+    title: '提出場所：「？」',
     puzzleImage: '/images/step7.png',
     themeText: '蜘蛛',
     puzzleAnswer: 'かんち',
@@ -359,8 +359,16 @@ export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
   },
 ];
 
-export const FINAL_STEP_SUBMISSIONS = LAST_STEP_SUBMISSIONS.filter(
+const RESUBMISSION_TARGETS = LAST_STEP_SUBMISSIONS.filter(
   submission => !submission.excludeFromFinalSubmission
+);
+
+export const FINAL_STEP_SUBMISSIONS = RESUBMISSION_TARGETS.filter(
+  submission => submission.stepIndex === 4 || submission.stepIndex === 8
+);
+
+export const BONUS_STEP_SUBMISSIONS = RESUBMISSION_TARGETS.filter(
+  submission => submission.stepIndex !== 4 && submission.stepIndex !== 8
 );
 
 export const LOCATIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
