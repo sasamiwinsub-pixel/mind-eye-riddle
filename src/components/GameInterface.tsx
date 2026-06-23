@@ -123,6 +123,7 @@ const CUT_IN_LINES = {
 } satisfies Record<string, CutInLine[]>;
 
 const getLastStepLogIndex = (step: 1 | 2 | 3) => GAME_STEPS.length + step - 1;
+const getBonusStepLogIndex = (step: 1 | 2) => GAME_STEPS.length + 3 + step;
 
 const highlightedCutInText = 'まさか募金箱のお金を移動させるなんて...。立山君はこういう時に頼もしいけど、友人の横山としては倫理観が心配だね';
 
@@ -277,6 +278,8 @@ export default function GameInterface() {
   const [isGameCleared, setIsGameCleared] = useState(false);
   const [finalSubmissions, setFinalSubmissions] = useState<FinalSubmission[]>(() => createInitialSubmissions(FINAL_STEP_SUBMISSIONS));
   const [showBonus, setShowBonus] = useState(false);
+  const [bonusStep, setBonusStep] = useState<1 | 2>(1);
+  const [bonusLastStepOneName, setBonusLastStepOneName] = useState('');
   const [bonusIndex, setBonusIndex] = useState(0);
   const [bonusSubmissions, setBonusSubmissions] = useState<FinalSubmission[]>(() => createInitialSubmissions(BONUS_STEP_SUBMISSIONS));
   const [bonusMessage, setBonusMessage] = useState('');
@@ -581,6 +584,11 @@ export default function GameInterface() {
     }));
   };
 
+  const setPhotoUpdateMarkers = (photos: string[]) => {
+    setNewPhotos(photos);
+    setPhotoTabHasUnreadUpdate(photos.length > 0);
+  };
+
   const startCutIn = (lines: CutInLine[], stepIndex = currentStepIndex, addToLog = true) => {
     setCutInLines(lines);
     setCutInIndex(0);
@@ -598,7 +606,7 @@ export default function GameInterface() {
   };
 
   const startLastStep = () => {
-    setLastStep(1);
+    setLastStep(2);
     setPhase('search');
     setIsPuzzleSolvedPending(false);
     setIsImageCollapsed(true);
@@ -608,7 +616,7 @@ export default function GameInterface() {
     setIsResubmissionRuleUnlocked(true);
     setShowRulesInfoPrompt(true);
     setApplyLastStepPhotoUpdateAfterCutIn(true);
-    showCorrectThenCutIn(CUT_IN_LINES.lastStepStart, getLastStepLogIndex(1));
+    showCorrectThenCutIn(CUT_IN_LINES.lastStepTwoStart, getLastStepLogIndex(2));
   };
 
   const applyLastStepStartPhotoUpdate = () => {
@@ -627,10 +635,7 @@ export default function GameInterface() {
       });
       return next;
     });
-    setNewPhotos([...newlyUnlocked, ...newlyUpdated]);
-    if (newlyUnlocked.length > 0 || newlyUpdated.length > 0) {
-      setPhotoTabHasUnreadUpdate(true);
-    }
+    setPhotoUpdateMarkers([...newlyUnlocked, ...newlyUpdated]);
   };
 
   const closeCorrectOverlay = () => {
@@ -704,10 +709,7 @@ export default function GameInterface() {
       return next;
     });
 
-    setNewPhotos([...newlyUnlocked, ...newlyUnlockedAtTheme, ...newlyUpdated]);
-    if (newlyUnlocked.length > 0 || newlyUnlockedAtTheme.length > 0 || newlyUpdated.length > 0) {
-      setPhotoTabHasUnreadUpdate(true);
-    }
+    setPhotoUpdateMarkers([...newlyUnlocked, ...newlyUnlockedAtTheme, ...newlyUpdated]);
 
     if (currentStepIndex === GAME_STEPS.length - 1) {
       startLastStep();
@@ -770,6 +772,11 @@ export default function GameInterface() {
       && searchPosition === position
       && searchItem.trim() === item
     ));
+    const matchedIncorrectMessage = currentStep.incorrectSearchMessages?.find(({ location, position, item }) => (
+      (location === undefined || searchLocation === location)
+      && (position === undefined || searchPosition === position)
+      && (item === undefined || searchItem.trim() === item)
+    ));
     
     if (isCorrectTarget) {
       setErrorMsg('');
@@ -807,10 +814,7 @@ export default function GameInterface() {
         });
 
         // 新規解放された写真 ＋ 更新された写真 を「NEW」として扱う
-        setNewPhotos([...newlyUnlocked, ...newlyUpdated]);
-        if (newlyUnlocked.length > 0 || newlyUpdated.length > 0) {
-          setPhotoTabHasUnreadUpdate(true);
-        }
+        setPhotoUpdateMarkers([...newlyUnlocked, ...newlyUpdated]);
         
         // メインタブに戻し、相棒のメッセージもリセットする
         setActivePartnerMessage(null);
@@ -832,7 +836,7 @@ export default function GameInterface() {
         startLastStep();
       }
     } else {
-      setErrorMsg('場所、位置、またはアイテム名が違います。');
+      setErrorMsg(matchedIncorrectMessage?.message ?? '場所、位置、またはアイテム名が違います。');
     }
   };
 
@@ -886,12 +890,28 @@ export default function GameInterface() {
       setLastStep(3);
       setUnlockedPhotos(prev => Array.from(new Set([...prev, 'き'])));
       setPhotoFiles(prev => ({ ...prev, き: 'き', E: 'E4' }));
-      setNewPhotos(['き', 'E']);
-      setPhotoTabHasUnreadUpdate(true);
-      showCorrectThenCutIn(CUT_IN_LINES.lastStepThreeStart, getLastStepLogIndex(3), true);
+      setPhotoUpdateMarkers(['き', 'E']);
       return;
     }
     setErrorMsg('温泉だと思う提出場所が違います。');
+  };
+
+  const handleBonusStepOneSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (
+      searchLocation === 'K'
+      && searchItem === '募金箱'
+      && searchPosition === '中'
+      && matchesTextAnswer(bonusLastStepOneName, ['1円玉'])
+    ) {
+      setBonusMessage('');
+      setSearchItem('');
+      setBonusLastStepOneName('');
+      setBonusStep(2);
+      showCorrectThenCutIn(CUT_IN_LINES.lastStepThreeStart, getBonusStepLogIndex(2), true);
+      return;
+    }
+    setBonusMessage('場所、位置、アイテム、または名称指定が違います。');
   };
 
   const handleFinalSubmissionsSubmit = (e: React.FormEvent) => {
@@ -955,7 +975,9 @@ export default function GameInterface() {
     ? ''
     : selectedCutInLogStep < GAME_STEPS.length
       ? GAME_STEPS[selectedCutInLogStep]?.title || ''
-      : `LASTSTEP${selectedCutInLogStep - GAME_STEPS.length + 1}`;
+      : selectedCutInLogStep > GAME_STEPS.length + 3
+        ? `EXTRA${selectedCutInLogStep - GAME_STEPS.length - 3}`
+        : `LASTSTEP${selectedCutInLogStep - GAME_STEPS.length + 1}`;
   const cutInTheme = activeCutInLine?.speaker === 'ゲームマスター'
     ? 'border-rose-400/70 from-rose-950/95 via-slate-950/95 to-rose-900/90 text-rose-100'
     : activeCutInLine?.speaker === '自分'
@@ -992,11 +1014,99 @@ export default function GameInterface() {
       ]))
       : [];
 
+    if (bonusStep === 1) {
+      return (
+        <div className="flex min-h-full flex-col px-5 py-6 pb-28 text-slate-100">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-black tracking-[0.3em] text-amber-300">EXTRA 1</p>
+              <h1 className="mt-1 text-2xl font-black">「アルミ」を再提出</h1>
+            </div>
+            <button type="button" onClick={() => setShowBonus(false)} className="rounded-lg border border-slate-600 px-3 py-2 text-sm font-bold text-slate-200">
+              クリア画面へ
+            </button>
+          </div>
+
+          <form onSubmit={handleBonusStepOneSubmit} className="mt-auto flex flex-col gap-3 rounded-2xl border border-amber-400/25 bg-slate-900/80 p-4 shadow-xl">
+            <div className="rounded-xl border border-amber-500/30 bg-amber-950/30 p-3">
+              <h3 className="text-sm font-bold text-amber-300">「アルミ」を再提出</h3>
+              <p className="mt-1 text-xs leading-relaxed text-slate-300">
+                場所・アイテム・位置を選択し、転送対象の名称も指定してください。
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block">
+                <span className="mb-1 block text-xs text-slate-400">場所</span>
+                <select
+                  value={searchLocation}
+                  onChange={(e) => {
+                    setSearchLocation(e.target.value);
+                    setSearchItem('');
+                    setBonusMessage('');
+                  }}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3 text-white focus:border-amber-500 focus:outline-none"
+                >
+                  {LOCATIONS.map(location => <option key={location} value={location}>{location}</option>)}
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs text-slate-400">基準となるアイテム</span>
+                <select
+                  value={searchItem}
+                  onChange={(e) => {
+                    setSearchItem(e.target.value);
+                    setBonusMessage('');
+                  }}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3 text-white focus:border-amber-500 focus:outline-none"
+                >
+                  <option value="">選択してください</option>
+                  {getAvailableItemsForLocation(searchLocation).map(item => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label className="block">
+              <span className="mb-1 block text-xs text-slate-400">位置</span>
+              <select
+                value={searchPosition}
+                onChange={(e) => {
+                  setSearchPosition(e.target.value);
+                  setBonusMessage('');
+                }}
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3 text-white focus:border-amber-500 focus:outline-none"
+              >
+                {POSITIONS.map(position => <option key={position} value={position}>{position}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-bold text-amber-300">名称指定（必須）</span>
+              <input
+                type="text"
+                value={bonusLastStepOneName}
+                onChange={(e) => {
+                  setBonusLastStepOneName(e.target.value);
+                  setBonusMessage('');
+                }}
+                required
+                className="w-full rounded-lg border border-amber-500/50 bg-slate-800 p-3 text-white focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                placeholder="転送するものの名称"
+              />
+            </label>
+            {bonusMessage && <p className="text-center text-sm font-bold text-amber-200">{bonusMessage}</p>}
+            <button type="submit" className="rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 py-3 font-bold text-white shadow-lg transition-all hover:from-amber-500 hover:to-orange-500 active:scale-95">
+              再提出する
+            </button>
+          </form>
+        </div>
+      );
+    }
+
     return (
       <div className="flex min-h-full flex-col px-5 py-6 pb-28 text-slate-100">
         <div className="mb-5 flex items-center justify-between">
           <div>
-            <p className="text-xs font-black tracking-[0.3em] text-amber-300">BONUS</p>
+            <p className="text-xs font-black tracking-[0.3em] text-amber-300">EXTRA 2</p>
             <h1 className="mt-1 text-2xl font-black">残りの再提出</h1>
           </div>
           <button type="button" onClick={() => setShowBonus(false)} className="rounded-lg border border-slate-600 px-3 py-2 text-sm font-bold text-slate-200">
@@ -1059,7 +1169,11 @@ export default function GameInterface() {
             type="button"
             onClick={() => {
               setActiveTab('main');
+              setBonusMessage('');
               setShowBonus(true);
+              if (bonusStep === 1 && bonusIndex === 0) {
+                startCutIn(CUT_IN_LINES.lastStepStart, getBonusStepLogIndex(1));
+              }
             }}
             className="mt-5 rounded-xl border border-amber-300/40 bg-amber-500/15 px-6 py-3 font-black text-amber-100 transition-colors hover:bg-amber-500/25"
           >
@@ -1076,10 +1190,10 @@ export default function GameInterface() {
       {/* Header */}
       <header className="glass-panel py-3 px-4 flex justify-between items-center z-10">
         <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
-          {showBonus ? 'BONUS' : displayTitle}
+          {showBonus ? 'EXTRA' : displayTitle}
         </h1>
         <div className="text-xs bg-slate-800 px-2 py-1 rounded-full border border-slate-700">
-          {showBonus ? `${Math.min(bonusIndex + 1, BONUS_STEP_SUBMISSIONS.length)} / ${BONUS_STEP_SUBMISSIONS.length}` : lastStep > 0 ? `LAST ${lastStep} / 3` : `Step ${currentStepIndex} / ${GAME_STEPS.length - 1}`}
+          {showBonus ? `EXTRA ${bonusStep} / 2` : lastStep > 0 ? `LAST ${lastStep} / 3` : `Step ${currentStepIndex} / ${GAME_STEPS.length - 1}`}
         </div>
       </header>
 
@@ -1168,6 +1282,17 @@ export default function GameInterface() {
             
             {/* Theme Area */}
             <div className="p-4 flex-1 flex flex-col">
+              <div className="mb-3 flex justify-end">
+                <a
+                  href="/hints"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full border border-cyan-300/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-bold text-cyan-100 shadow-sm transition-colors hover:bg-cyan-500/20"
+                >
+                  ヒントを見る
+                </a>
+              </div>
+
               {phase === 'search' && (lastStep === 0 || lastStep === 1) && (
                 <div className="glass rounded-xl p-4 mb-4 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)] animate-in fade-in slide-in-from-top-2 duration-300">
                   <h2 className="text-blue-400 text-sm font-semibold mb-1">現在のお題</h2>
@@ -1794,19 +1919,15 @@ export default function GameInterface() {
                 </div>
                 );
               })}
-              {lastStep > 0 && ([1, 2, 3] as const).slice(0, lastStep).map(step => {
+              {lastStep > 0 && ([2, 3] as const).filter(step => step <= lastStep).map(step => {
                 const logIndex = getLastStepLogIndex(step);
                 const stepCutInLog = cutInLogByStep[logIndex] || [];
-                const question = step === 1
-                  ? 'お題「アルミ」を、場所・基準アイテム・位置・名称を指定して再提出する'
-                  : step === 2
-                    ? '温泉だと思う提出場所はどこか？'
-                    : null;
-                const submittedAnswer = step === 1
-                  ? lastStepOneAnswerLog
-                  : step === 2
-                    ? lastStepTwoAnswerLog
-                    : null;
+                const question = step === 2
+                  ? '温泉だと思う提出場所はどこか？'
+                  : null;
+                const submittedAnswer = step === 2
+                  ? lastStepTwoAnswerLog
+                  : null;
                 return (
                   <div key={`last-step-${step}`} className="rounded-xl border border-rose-500/30 bg-rose-950/20 p-3">
                     <div className="flex items-center justify-between gap-2">
@@ -1879,7 +2000,7 @@ export default function GameInterface() {
         <button 
           onClick={() => {
             setActiveTab('photos');
-            setPhotoTabHasUnreadUpdate(false);
+            setPhotoUpdateMarkers([]);
             if (tabGuideStep === 'photos') {
               setTabGuideStep('photoA');
             }

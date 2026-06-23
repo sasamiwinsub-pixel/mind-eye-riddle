@@ -23,6 +23,12 @@ export interface StepData {
     position: string;
     item: string;
   }[];
+  incorrectSearchMessages?: {
+    location?: string;
+    position?: string;
+    item?: string;
+    message: string;
+  }[];
   unlockedPhotos: string[]; // このステップで新規解放されるフィールド写真
   unlockedPhotosAtTheme?: string[]; // お題表示時に新規解放されるフィールド写真
   updatedPhotosAtTheme?: Record<string, string>; // お題表示時に既存の写真を差し替える (例: { 'A': 'A_v2' })
@@ -157,7 +163,7 @@ export const GAME_STEPS: StepData[] = [
           acceptedAnswers: ['たまご'],
           unlockLocation: 'D',
           unlockItem: '卵のパック',
-          successMessage: 'そうだ、卵だ！Cの選択肢に卵が追加されたぞ！'
+          successMessage: 'そうだ、卵だ！Cの選択肢に卵のパックが追加されたぞ！'
         }
       }
     ],
@@ -188,6 +194,13 @@ export const GAME_STEPS: StepData[] = [
     showBlueAnswerEffect: true,
     searchTarget: { location: 'G', position: '上', item: '浴衣' },
     acceptedSearchTargets: [{ location: 'G', position: '中', item: '浴衣' }],
+    incorrectSearchMessages: [
+      {
+        location: 'A',
+        item: '掛け軸',
+        message: '掛ける部分も含めて掛け軸です',
+      }
+    ],
     unlockedPhotos: ['H'],
     updatedPhotosAtPuzzle: { 'E': 'E2', },
     updatedPhotosAtTheme: {'A': 'A4', 'F': 'F3', 'I': 'I2' }, 
@@ -215,6 +228,13 @@ export const GAME_STEPS: StepData[] = [
     },
     showBlueAnswerEffect: true,
     searchTarget: { location: 'H', position: '右', item: '酒瓶' },
+    incorrectSearchMessages: [
+      {
+        location: 'H',
+        item: '右の缶',
+        message: '提出したいもの自体を基準アイテムにはできません',
+      },
+    ],
     unlockedPhotos: [],
     updatedPhotosAtPuzzle: {'A': 'A6', 'H': 'H2' },
     unlockedLocationItems: {
@@ -367,7 +387,7 @@ export const FINAL_STEP_SUBMISSIONS = RESUBMISSION_TARGETS.filter(
   submission => submission.stepIndex === 4 || submission.stepIndex === 8
 );
 
-export const BONUS_STEP_SUBMISSIONS = RESUBMISSION_TARGETS.filter(
+export const BONUS_STEP_SUBMISSIONS = LAST_STEP_SUBMISSIONS.filter(
   submission => submission.stepIndex !== 4 && submission.stepIndex !== 8
 );
 
