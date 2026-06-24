@@ -122,6 +122,13 @@ export const GAME_STEPS: StepData[] = [
       'A': ['掛け軸']
     },
     memos: ['ルール2：相棒はライオンの銅像に姿が変わっている'],
+     incorrectSearchMessages: [
+      {
+        location: 'B',
+        item: 'ライオンの銅像',
+        message: '基準とするアイテム自体を提出対象にはできません',
+      }
+    ],
 
   },
   {
@@ -183,6 +190,13 @@ export const GAME_STEPS: StepData[] = [
       G: ['浴衣'],
       F: ['ドライヤー', 'ハブラシ', 'カミソリ']
     },
+    partnerEvents: [
+      { 
+        targetPhoto: 'E', 
+        availableAfterPuzzleSolved: true,
+        message: 'なんかこれ、球体っぽくない？影の感じもそれっぽい気がする',
+      }
+    ],
   },
   {
     id: 4,
@@ -282,17 +296,21 @@ export const GAME_STEPS: StepData[] = [
     puzzleAnswer: 'かんち',
     acceptedPuzzleAnswers: ['完治', 'カンチ'],
     searchTarget: { location: 'J', position: '下', item: 'きつね' },
-    unlockedPhotos: ['L'],
+    unlockedPhotos: ['L', 'お'],
     updatedPhotosAtPuzzle: { },
     unlockedLocationItems: {
       K: ['暖簾', '募金箱']
     },
+    partnerEvents: [
+      { targetPhoto: 'お',  message: 'おかしいな...Ｅの謎の球体を提出した場所に木のフィギュア？が出現してる...'        
+       },
+      ]
   },
 ];
 
 export const LAST_STEP_START_PHOTO_UPDATE: PhotoUpdateData = {
-  unlockedPhotos: ['お'],
-  updatedPhotos: {'B': 'B', 'H': 'H5'},
+  unlockedPhotos: [],
+  // updatedPhotos: {'B': 'B', 'H': 'H5'},
 };
 
 export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
@@ -374,7 +392,7 @@ export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
     originalSubmittedItem: '蜘蛛',
     retryItem: 'バスボール',
     acceptedRetryItems: ['ばすぼむ', '入浴剤', 'ばすだま', 'バスだま', '入浴球', 'にゅうよくだま', 'にゅうよくきゅう', 'ばすぼーる', 'バスぼーる', 'ばすボール', 'バスボム'],
-    acceptedTargets: [{ location: 'E', item: 'パック', position: '中' }],
+    acceptedTargets: [{ location: 'E', item: 'パック', position: '外' }],
     isPending: true,
   },
 ];
@@ -384,7 +402,7 @@ const RESUBMISSION_TARGETS = LAST_STEP_SUBMISSIONS.filter(
 );
 
 export const FINAL_STEP_SUBMISSIONS = RESUBMISSION_TARGETS.filter(
-  submission => submission.stepIndex === 4 || submission.stepIndex === 8
+  submission => submission.stepIndex === 4
 );
 
 export const BONUS_STEP_SUBMISSIONS = LAST_STEP_SUBMISSIONS.filter(

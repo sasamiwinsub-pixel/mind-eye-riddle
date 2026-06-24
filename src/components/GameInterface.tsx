@@ -35,6 +35,7 @@ type SavedGameProgress = {
   hotSpringAnswer: string;
   lastStepOneAnswerLog: string | null;
   lastStepTwoAnswerLog: string | null;
+  finalSphereAnswer?: string;
   isGameCleared: boolean;
   finalSubmissions: FinalSubmission[];
   showCorrectOverlay: boolean;
@@ -101,24 +102,38 @@ const CUT_IN_LINES = {
   ],
   lastStepStart: [
     { speaker: '相棒', text: 'あと一つ提出するだけだ！' },
-    { speaker: 'ゲームマスター', text: '残念ですが、提出場所「お」が、たった今正解から不正解判定に変わりました' },
-    { speaker: '相棒', text: '何だって！？謎の球体が一度正解になったのに、不正解に変わったの...か？ひとまず「お」の場所を見に行ってみるよ' },
-    { speaker: 'ゲームマスター', text: '一度不正解となったため、指定する二つを再提出してもらいます。戻せるものは元の位置に戻してあるのでやり直しです。さらに、新たな制約が追加されました' },
-    { speaker: 'ゲームマスター', text: 'その制約とは、転送対象の名称の指定の必須化。名称を指定した場合、該当するものが同時に複数個転送されます' },
-    { speaker: 'ゲームマスター', text: '我々はフェアさを大事にしているので、一つだけアドバイスを差し上げましょう。「お」を確認した後は、ひとまずお題「アルミ」を再提出してみましょう' },
+    { speaker: 'ゲームマスター', text: '残念ですが、提出場所「お」は数秒間正解判定となったもののすぐに不正解判定へ変わっております。全ての提出場所が安定して正解判定となることが成功条件です' },
+    { speaker: '相棒', text: '何だって！？謎の球体が変化したの...か？ひとまず「お」の場所を見に行ってみるよ' },
+    { speaker: 'ゲームマスター', text: '「お」も後で再提出してもらうため、残り二つです。最後のお題「蜘蛛」の提出場所は「あ」～「き」のいずれか好きな場所で構いません' },
+    { speaker: 'ゲームマスター', text: 'しかし、Eの8個ある球体の中の一つにしか蜘蛛は存在せず、現状一度の提出で正解することは不可能です'},
+    { speaker: '相棒', text: 'ならどうすればいいんだ？' },
+    { speaker: 'ゲームマスター', text: 'そこで、「外」の選択肢を解放してあげましょう。ただし、提出後に謎の球体が何かを最後に当ててもらいます' },
+    { speaker: 'ゲームマスター', text: '提出場所で一カ所しかない温泉の場所が分からなければ、クリアすることはできないでしょう' },
+    { speaker: '相棒', text: 'なんか意外と親切なゲームマスターだな。ひとまず温泉の場所を特定しよう' },
+
   ],
-  lastStepTwoStart: [
-    { speaker: '相棒', text: 'まさか募金箱のお金を移動させるなんて...。立山君はこういう時に頼もしいけど、友人の横山としては倫理観が心配だね' },
-    { speaker: 'ゲームマスター', text: 'ご安心ください。元々空の募金箱に2枚の硬貨、11円を事前に募金をしておきました。窃盗には当たらないのでご安心を' },
-    { speaker: '相棒', text: 'なら、大丈夫か。あ、君に負けじと一つやってみたいことをしても良いかい？' },
-    { speaker: '相棒', text: '実は提出時以外で一度だけ転送をさせる権利が僕に与えられていたんだけど、その権利をここで行使したい' },
-    { speaker: '相棒', text: '僕の予想だと提出場所のどこかが温泉だと思うのだけど、温泉だと思う場所に一度球体として提出したものを転送してみたいんだ' },
+  lastStepTwoStart:[
+    { speaker: '相棒', text: 'じゃあ、蜘蛛を提出してみよう！' },
+    { speaker: '相棒', text: 'しかし、「パック」の「中」という指定では、ランダムに一つ謎の球体がが選ばれて蜘蛛が当たるか分からないな' },
+    { speaker: '相棒', text: '一度で確実に蜘蛛が提出される指定の仕方をしよう' },
   ],
+  // lastStepTwoStart: [
+  //   { speaker: '相棒', text: 'まさか募金箱のお金を移動させるなんて...。立山君はこういう時に頼もしいけど、友人の横山としては倫理観が心配だね' },
+  //   { speaker: 'ゲームマスター', text: 'ご安心ください。元々空の募金箱に2枚の硬貨、11円を事前に募金をしておきました。窃盗には当たらないのでご安心を' },
+  //   { speaker: '相棒', text: 'なら、大丈夫か。あ、君に負けじと一つやってみたいことをしても良いかい？' },
+  //   { speaker: '相棒', text: '実は提出時以外で一度だけ転送をさせる権利が僕に与えられていたんだけど、その権利をここで行使したい' },
+  //   { speaker: '相棒', text: '僕の予想だと提出場所のどこかが温泉だと思うのだけど、温泉だと思う場所に一度球体として提出したものを転送してみたいんだ' },
+  // ],
+  // 最後に玉と謎の球体の回答でLAST3
+  // おまけでゲームマスターが疑われるのを防ぐ目的で延長戦へ
   lastStepThreeStart: [
-    { speaker: '相棒', text: '温泉に転送してみたけど、すぐに木のフィギュアが出てきたね' },
-    { speaker: '相棒', text: 'どうやらEにある謎の球体、水や温度に反応して球体が消えていくようだ。徐々にフィギュアが見えてきたので間違いない' },
-    { speaker: '相棒', text: '一見するとEの球体にありそうな蜘蛛を直接名称指定すれば解決しそうだけど、入れ子構造の中身は直接取り出せないルールだ' },
-    { speaker: '相棒', text: 'コンプリートセットのどれかに蜘蛛が入っていそうだけど、いずれにせよ球体の名称を指定して全ての球体を転送するしかなさそうだ' },
+    { speaker: '相棒', text: '「お」の温泉に提出してみたけど、すぐに蜘蛛のフィギュアが出てきたね' },
+    { speaker: '相棒', text: 'どうやらEにある謎の球体、温泉に反応して球体が消えていくようだ。徐々にフィギュアが見えてきたので間違いない' },
+  ],
+  bonusStart: [
+    { speaker: '相棒', text: '相棒は気づいていたみたいだけど、ずいぶんと助けてくれたみたいだね。ゲームマスター？' },
+    { speaker: 'ゲームマスター', text: '気づいていましたか。実はお題の量も削ったり、少々肩入れをしすぎたので、後で疑われてしまうかもしれません' },
+    { speaker: '相棒', text: 'うーん、どうする相棒？削ったお題も出してもらって、疑いの眼を向けられないようにしてあげる？' },
   ],
 } satisfies Record<string, CutInLine[]>;
 
@@ -207,9 +222,14 @@ const isSavedGameProgress = (value: unknown): value is SavedGameProgress => {
     && typeof value.hotSpringAnswer === 'string'
     && (value.lastStepOneAnswerLog === null || typeof value.lastStepOneAnswerLog === 'string')
     && (value.lastStepTwoAnswerLog === null || typeof value.lastStepTwoAnswerLog === 'string')
+    && (value.finalSphereAnswer === undefined || typeof value.finalSphereAnswer === 'string')
     && typeof value.isGameCleared === 'boolean'
     && Array.isArray(value.finalSubmissions)
-    && (value.finalSubmissions.length === FINAL_STEP_SUBMISSIONS.length || value.finalSubmissions.length === 8)
+    && (
+      value.finalSubmissions.length === FINAL_STEP_SUBMISSIONS.length
+      || value.finalSubmissions.length === 2
+      || value.finalSubmissions.length === 8
+    )
     && value.finalSubmissions.every(isFinalSubmission)
     && typeof value.showCorrectOverlay === 'boolean'
     && typeof value.isRulesInfoUnlocked === 'boolean'
@@ -275,6 +295,7 @@ export default function GameInterface() {
   const [hotSpringAnswer, setHotSpringAnswer] = useState('');
   const [lastStepOneAnswerLog, setLastStepOneAnswerLog] = useState<string | null>(null);
   const [lastStepTwoAnswerLog, setLastStepTwoAnswerLog] = useState<string | null>(null);
+  const [finalSphereAnswer, setFinalSphereAnswer] = useState('');
   const [isGameCleared, setIsGameCleared] = useState(false);
   const [finalSubmissions, setFinalSubmissions] = useState<FinalSubmission[]>(() => createInitialSubmissions(FINAL_STEP_SUBMISSIONS));
   const [showBonus, setShowBonus] = useState(false);
@@ -283,6 +304,7 @@ export default function GameInterface() {
   const [bonusIndex, setBonusIndex] = useState(0);
   const [bonusSubmissions, setBonusSubmissions] = useState<FinalSubmission[]>(() => createInitialSubmissions(BONUS_STEP_SUBMISSIONS));
   const [bonusMessage, setBonusMessage] = useState('');
+  const [showBonusChoice, setShowBonusChoice] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState('');
   const [showCorrectOverlay, setShowCorrectOverlay] = useState(false);
@@ -355,6 +377,7 @@ export default function GameInterface() {
   const displayTitle = lastStep > 0 ? `LASTSTEP${lastStep}` : currentStep.title;
   const reachedSteps = GAME_STEPS.slice(0, currentStepIndex + 1);
   const finalSubmissionTargets = FINAL_STEP_SUBMISSIONS;
+  const lastStepTwoPositions = [...POSITIONS, '外'];
 
   useEffect(() => {
     const restoreTimer = window.setTimeout(() => {
@@ -372,10 +395,13 @@ export default function GameInterface() {
         setHotSpringAnswer(savedGame.hotSpringAnswer);
         setLastStepOneAnswerLog(savedGame.lastStepOneAnswerLog);
         setLastStepTwoAnswerLog(savedGame.lastStepTwoAnswerLog);
+        setFinalSphereAnswer(savedGame.finalSphereAnswer ?? '');
         setIsGameCleared(savedGame.isGameCleared);
         setFinalSubmissions(
           savedGame.finalSubmissions.length === FINAL_STEP_SUBMISSIONS.length
             ? savedGame.finalSubmissions
+            : savedGame.finalSubmissions.length === 2
+              ? [savedGame.finalSubmissions[0]]
             : [savedGame.finalSubmissions[4], savedGame.finalSubmissions[7]],
         );
         setShowCorrectOverlay(savedGame.showCorrectOverlay);
@@ -429,6 +455,7 @@ export default function GameInterface() {
       hotSpringAnswer,
       lastStepOneAnswerLog,
       lastStepTwoAnswerLog,
+      finalSphereAnswer,
       isGameCleared,
       finalSubmissions,
       showCorrectOverlay,
@@ -465,6 +492,7 @@ export default function GameInterface() {
     cutInLogByStep,
     currentStepId,
     finalSubmissions,
+    finalSphereAnswer,
     hasRestoredProgress,
     hasShownStepOSearchHint,
     hasStartedTabGuide,
@@ -606,17 +634,15 @@ export default function GameInterface() {
   };
 
   const startLastStep = () => {
-    setLastStep(2);
+    setLastStep(1);
     setPhase('search');
     setIsPuzzleSolvedPending(false);
     setIsImageCollapsed(true);
     setActivePartnerMessage(null);
     setActiveTab('main');
     setErrorMsg('');
-    setIsResubmissionRuleUnlocked(true);
-    setShowRulesInfoPrompt(true);
     setApplyLastStepPhotoUpdateAfterCutIn(true);
-    showCorrectThenCutIn(CUT_IN_LINES.lastStepTwoStart, getLastStepLogIndex(2));
+    showCorrectThenCutIn(CUT_IN_LINES.lastStepStart, getLastStepLogIndex(1));
   };
 
   const applyLastStepStartPhotoUpdate = () => {
@@ -656,6 +682,9 @@ export default function GameInterface() {
         setIsSingleVisualizationRuleUnlocked(true);
         setShowRulesInfoPrompt(true);
         setUnlockSingleVisualizationRuleAfterCutIn(false);
+      }
+      if (showBonus && cutInLines === CUT_IN_LINES.bonusStart) {
+        setShowBonusChoice(true);
       }
       setCutInLines([]);
       setCutInIndex(0);
@@ -860,40 +889,40 @@ export default function GameInterface() {
     setBonusMessage('');
   };
 
-  const handleLastStepOneSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (
-      searchLocation === 'K'
-      && searchItem === '募金箱'
-      && searchPosition === '中'
-      && matchesTextAnswer(lastStepOneName, ['1円玉'])
-    ) {
-      setErrorMsg('');
-      setLastStepOneAnswerLog(
-        `場所：${searchLocation} / 基準アイテム：${searchItem} / 位置：${searchPosition} / 名称指定：${lastStepOneName}`
-      );
-      setSearchItem('');
-      setLastStepOneName('');
-      setLastStep(2);
-      showCorrectThenCutIn(CUT_IN_LINES.lastStepTwoStart, getLastStepLogIndex(2));
-      return;
-    }
-    setErrorMsg('場所、位置、アイテム、または名称指定が違います。');
-  };
-
   const handleLastStepTwoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (matchesTextAnswer(hotSpringAnswer, ['き'])) {
       setErrorMsg('');
       setLastStepTwoAnswerLog(`提出場所：${hotSpringAnswer}`);
       setHotSpringAnswer('');
+      setLastStep(2);
+      showCorrectThenCutIn(CUT_IN_LINES.lastStepTwoStart, getLastStepLogIndex(2));
+      return;
+    }
+    setErrorMsg('温泉だと思う提出場所が違います。');
+  };
+
+  const handleLastStepSpiderSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (
+      searchLocation === 'E'
+      && searchItem === '蜘蛛'
+      && searchPosition === '外'
+    ) {
+      setErrorMsg('');
+      setLastStepOneAnswerLog(
+        `場所：${searchLocation} / 基準アイテム：${searchItem} / 位置：${searchPosition}`
+      );
+      setSearchItem('');
+      setSearchPosition(POSITIONS[0]);
       setLastStep(3);
       setUnlockedPhotos(prev => Array.from(new Set([...prev, 'き'])));
       setPhotoFiles(prev => ({ ...prev, き: 'き', E: 'E4' }));
       setPhotoUpdateMarkers(['き', 'E']);
+      showCorrectThenCutIn(CUT_IN_LINES.lastStepThreeStart, getLastStepLogIndex(3), true);
       return;
     }
-    setErrorMsg('温泉だと思う提出場所が違います。');
+    setErrorMsg('提出場所「お」へ、お題「蜘蛛」を提出する内容になっていません。');
   };
 
   const handleBonusStepOneSubmit = (e: React.FormEvent) => {
@@ -931,8 +960,22 @@ export default function GameInterface() {
           ...(target.acceptedRetryItems || []),
         ]);
     });
+    const isSphereAnswerCorrect = matchesTextAnswer(finalSphereAnswer, [
+      'バスボール',
+      'ばすぼーる',
+      'バスぼーる',
+      'ばすボール',
+      'バスボム',
+      'ばすぼむ',
+      '入浴剤',
+      'ばすだま',
+      'バスだま',
+      '入浴球',
+      'にゅうよくだま',
+      'にゅうよくきゅう',
+    ]);
 
-    if (allCorrect) {
+    if (allCorrect && isSphereAnswerCorrect) {
       setErrorMsg('');
       setIsGameCleared(true);
     } else {
@@ -971,6 +1014,19 @@ export default function GameInterface() {
 
   const activeCutInLine = cutInLines[cutInIndex] || null;
   const selectedCutInLogLines = selectedCutInLogStep !== null ? cutInLogByStep[selectedCutInLogStep] || [] : [];
+  const isLastStepHotSpringStage = lastStep === 1 || (lastStep === 2 && !lastStepTwoAnswerLog);
+  const isLastStepSpiderStage = lastStep === 2 && Boolean(lastStepTwoAnswerLog);
+  const lastStepTwoItems = Array.from(new Set([
+    ...getAvailableItemsForLocation(searchLocation),
+    ...(searchLocation === 'E' ? ['蜘蛛'] : []),
+  ]));
+  const visibleLastStepLogSteps: (1 | 2 | 3)[] = lastStep === 0
+    ? []
+    : isLastStepSpiderStage
+      ? [1, 2]
+    : lastStep >= 3
+        ? [1, 2, 3]
+        : [1];
   const selectedCutInLogTitle = selectedCutInLogStep === null
     ? ''
     : selectedCutInLogStep < GAME_STEPS.length
@@ -1013,6 +1069,36 @@ export default function GameInterface() {
         ...(submission.location === originalStep.searchTarget.location ? [originalStep.searchTarget.item] : []),
       ]))
       : [];
+
+    if (showBonusChoice) {
+      return (
+        <div className="flex min-h-full flex-col items-center justify-center px-5 py-6 pb-28 text-slate-100">
+          <div className="w-full rounded-3xl border border-amber-300/30 bg-slate-900/95 p-5 text-center shadow-2xl shadow-amber-950/30">
+            <p className="text-xs font-black tracking-[0.35em] text-amber-300">EXTRA</p>
+            <h1 className="mt-2 text-2xl font-black text-white">削られたお題にも挑戦しますか？</h1>
+            <p className="mt-3 text-sm leading-relaxed text-slate-300">
+              どちらを選んでも、おまけの再提出へ進みます。
+            </p>
+            <div className="mt-6 grid gap-3">
+              <button
+                type="button"
+                onClick={() => setShowBonusChoice(false)}
+                className="rounded-2xl border border-slate-600 bg-slate-800 px-4 py-5 text-lg font-black text-slate-100 transition-colors hover:bg-slate-700 active:scale-95"
+              >
+                仕方ないな
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowBonusChoice(false)}
+                className="rounded-2xl border border-amber-300/50 bg-gradient-to-r from-amber-600 to-orange-600 px-4 py-5 text-lg font-black text-white shadow-lg shadow-amber-950/40 transition-all hover:from-amber-500 hover:to-orange-500 active:scale-95"
+              >
+                謎は全部解きたい！
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     if (bonusStep === 1) {
       return (
@@ -1170,9 +1256,10 @@ export default function GameInterface() {
             onClick={() => {
               setActiveTab('main');
               setBonusMessage('');
+              setShowBonusChoice(false);
               setShowBonus(true);
               if (bonusStep === 1 && bonusIndex === 0) {
-                startCutIn(CUT_IN_LINES.lastStepStart, getBonusStepLogIndex(1));
+                startCutIn(CUT_IN_LINES.bonusStart, getBonusStepLogIndex(1));
               }
             }}
             className="mt-5 rounded-xl border border-amber-300/40 bg-amber-500/15 px-6 py-3 font-black text-amber-100 transition-colors hover:bg-amber-500/25"
@@ -1205,9 +1292,7 @@ export default function GameInterface() {
               <div className="absolute right-4 bottom-20 z-30 flex flex-col items-end gap-2">
                 {showRulesInfoPrompt && (
                   <div className="max-w-56 rounded-xl border border-cyan-300/40 bg-slate-800/95 px-3 py-2 text-xs font-bold leading-relaxed text-cyan-50 shadow-lg shadow-cyan-950/40 animate-pulse">
-                    {isResubmissionRuleUnlocked
-                      ? '再提出時のルールが追加されました。informationを確認してください。'
-                      : isAdditionalRuleUnlocked
+                    {isAdditionalRuleUnlocked
                       ? '追加で判明したルールがあります。informationを確認してください。'
                       : 'ゲームのルールはいつでも確認できます。まずはここを押してみましょう。'}
                   </div>
@@ -1293,10 +1378,10 @@ export default function GameInterface() {
                 </a>
               </div>
 
-              {phase === 'search' && (lastStep === 0 || lastStep === 1) && (
+              {phase === 'search' && lastStep === 0 && (
                 <div className="glass rounded-xl p-4 mb-4 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)] animate-in fade-in slide-in-from-top-2 duration-300">
                   <h2 className="text-blue-400 text-sm font-semibold mb-1">現在のお題</h2>
-                  <p className="text-lg text-slate-100">{lastStep === 1 ? 'アルミ' : currentStep.themeText}</p>
+                  <p className="text-lg text-slate-100">{currentStep.themeText}</p>
                 </div>
               )}
 
@@ -1348,71 +1433,7 @@ export default function GameInterface() {
                     </button>
                   </form>
                   )
-                ) : lastStep === 1 ? (
-                  <form onSubmit={handleLastStepOneSubmit} className="flex flex-col gap-3">
-                    <div className="rounded-xl border border-amber-500/30 bg-amber-950/30 p-3">
-                      <h3 className="text-sm font-bold text-amber-300">「アルミ」を再提出</h3>
-                      <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                        場所・アイテム・位置を選択し、転送対象の名称も指定してください。
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <label className="block">
-                        <span className="mb-1 block text-xs text-slate-400">場所</span>
-                        <select
-                          value={searchLocation}
-                          onChange={(e) => {
-                            setSearchLocation(e.target.value);
-                            setSearchItem('');
-                          }}
-                          className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3 text-white focus:border-amber-500 focus:outline-none"
-                        >
-                          {LOCATIONS.map(location => <option key={location} value={location}>{location}</option>)}
-                        </select>
-                      </label>
-                      <label className="block">
-                        <span className="mb-1 block text-xs text-slate-400">基準となるアイテム</span>
-                        <select
-                          value={searchItem}
-                          onChange={(e) => setSearchItem(e.target.value)}
-                          className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3 text-white focus:border-amber-500 focus:outline-none"
-                        >
-                          <option value="">選択してください</option>
-                          {getAvailableItemsForLocation(searchLocation).map(item => (
-                            <option key={item} value={item}>{item}</option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    <label className="block">
-                      <span className="mb-1 block text-xs text-slate-400">位置</span>
-                      <select
-                        value={searchPosition}
-                        onChange={(e) => setSearchPosition(e.target.value)}
-                        className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3 text-white focus:border-amber-500 focus:outline-none"
-                      >
-                        {POSITIONS.map(position => <option key={position} value={position}>{position}</option>)}
-                      </select>
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-xs font-bold text-amber-300">名称指定（必須）</span>
-                      <input
-                        type="text"
-                        value={lastStepOneName}
-                        onChange={(e) => setLastStepOneName(e.target.value)}
-                        required
-                        className="w-full rounded-lg border border-amber-500/50 bg-slate-800 p-3 text-white focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
-                        placeholder="転送するものの名称"
-                      />
-                    </label>
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 py-3 font-bold text-white shadow-lg transition-all hover:from-amber-500 hover:to-orange-500 active:scale-95"
-                    >
-                      再提出する
-                    </button>
-                  </form>
-                ) : lastStep === 2 ? (
+                ) : isLastStepHotSpringStage ? (
                   <form onSubmit={handleLastStepTwoSubmit} className="flex flex-col gap-3">
                     <div className="rounded-xl border border-cyan-500/30 bg-cyan-950/30 p-4 shadow-[0_0_18px_rgba(6,182,212,0.12)]">
                       <h3 className="text-sm font-bold text-cyan-300">どこが温泉か？</h3>
@@ -1441,12 +1462,65 @@ export default function GameInterface() {
                       回答する
                     </button>
                   </form>
+                ) : isLastStepSpiderStage ? (
+                  <form onSubmit={handleLastStepSpiderSubmit} className="flex flex-col gap-3">
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-950/30 p-3">
+                      <h3 className="text-sm font-bold text-amber-300">提出場所「お」に「蜘蛛」を提出</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-300">
+                        温泉だと分かった提出場所「お」へ、お題「蜘蛛」を提出してください。位置に「外」が追加されています。
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="block">
+                        <span className="mb-1 block text-xs text-slate-400">場所</span>
+                        <select
+                          value={searchLocation}
+                          onChange={(e) => {
+                            setSearchLocation(e.target.value);
+                            setSearchItem('');
+                          }}
+                          className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3 text-white focus:border-amber-500 focus:outline-none"
+                        >
+                          {LOCATIONS.map(location => <option key={location} value={location}>{location}</option>)}
+                        </select>
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-xs text-slate-400">基準となるアイテム</span>
+                        <select
+                          value={searchItem}
+                          onChange={(e) => setSearchItem(e.target.value)}
+                          className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3 text-white focus:border-amber-500 focus:outline-none"
+                        >
+                          <option value="">選択してください</option>
+                          {lastStepTwoItems.map(item => (
+                            <option key={item} value={item}>{item}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <label className="block">
+                      <span className="mb-1 block text-xs text-slate-400">位置</span>
+                      <select
+                        value={searchPosition}
+                        onChange={(e) => setSearchPosition(e.target.value)}
+                        className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3 text-white focus:border-amber-500 focus:outline-none"
+                      >
+                        {lastStepTwoPositions.map(position => <option key={position} value={position}>{position}</option>)}
+                      </select>
+                    </label>
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 py-3 font-bold text-white shadow-lg transition-all hover:from-amber-500 hover:to-orange-500 active:scale-95"
+                    >
+                      提出する
+                    </button>
+                  </form>
                 ) : lastStep === 3 ? (
                   <form onSubmit={handleFinalSubmissionsSubmit} className="flex flex-col gap-3">
                     <div className="rounded-xl border border-rose-500/30 bg-rose-950/30 p-3 shadow-[0_0_18px_rgba(244,63,94,0.12)]">
                       <h3 className="text-sm font-bold text-rose-300">最終提出</h3>
                       <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                        指定された二つの提出を、転送対象の名称指定を含めてもう一度指定してください。
+                        球体の再提出と、Eの謎の球体が何だったのかを同時に回答してください。
                       </p>
                     </div>
 
@@ -1539,6 +1613,18 @@ export default function GameInterface() {
                         );
                       })}
                     </div>
+
+                    <label className="block rounded-xl border border-cyan-500/30 bg-cyan-950/25 p-3">
+                      <span className="mb-1 block text-xs font-bold text-cyan-300">Eの謎の球体は何だった？</span>
+                      <input
+                        type="text"
+                        value={finalSphereAnswer}
+                        onChange={(e) => setFinalSphereAnswer(e.target.value)}
+                        required
+                        className="w-full rounded-lg border border-cyan-500/40 bg-slate-900 p-3 text-sm text-white focus:border-cyan-400 focus:outline-none"
+                        placeholder="答えを入力"
+                      />
+                    </label>
 
                     <button
                       type="submit"
@@ -1919,15 +2005,19 @@ export default function GameInterface() {
                 </div>
                 );
               })}
-              {lastStep > 0 && ([2, 3] as const).filter(step => step <= lastStep).map(step => {
+              {visibleLastStepLogSteps.map(step => {
                 const logIndex = getLastStepLogIndex(step);
                 const stepCutInLog = cutInLogByStep[logIndex] || [];
-                const question = step === 2
+                const question = step === 1
                   ? '温泉だと思う提出場所はどこか？'
-                  : null;
-                const submittedAnswer = step === 2
+                  : step === 2
+                    ? '提出場所「お」に、お題「蜘蛛」を提出する'
+                    : null;
+                const submittedAnswer = step === 1
                   ? lastStepTwoAnswerLog
-                  : null;
+                  : step === 2
+                    ? lastStepOneAnswerLog
+                    : null;
                 return (
                   <div key={`last-step-${step}`} className="rounded-xl border border-rose-500/30 bg-rose-950/20 p-3">
                     <div className="flex items-center justify-between gap-2">
@@ -2000,7 +2090,7 @@ export default function GameInterface() {
         <button 
           onClick={() => {
             setActiveTab('photos');
-            setPhotoUpdateMarkers([]);
+            setPhotoTabHasUnreadUpdate(false);
             if (tabGuideStep === 'photos') {
               setTabGuideStep('photoA');
             }
@@ -2183,15 +2273,6 @@ export default function GameInterface() {
                 </section>
               )}
 
-              {isResubmissionRuleUnlocked && (
-                <section className="rounded-xl border border-amber-400/30 bg-amber-950/20 p-3">
-                  <h3 className="mb-2 font-bold text-amber-300">再提出時のルール</h3>
-                  <ul className="list-disc space-y-1 pl-5">
-                    <li>転送したいものの名称指定が必須となる</li>
-                    <li>複数個同じものがあった場合、全て転送される</li>
-                  </ul>
-                </section>
-              )}
             </div>
           </div>
         </div>
