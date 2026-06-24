@@ -95,15 +95,15 @@ export const GAME_STEPS: StepData[] = [
     themeText: 'たんさん',
     puzzleAnswer: 'PM',
     acceptedPuzzleAnswers: ['pm', '午後', 'ごご', 'ゴゴ'],
-    searchTarget: { location: 'C', position: '中', item: '時計' },
-    unlockedPhotos: ['B','C'],
+    searchTarget: { location: 'D', position: '中', item: '時計' },
+    unlockedPhotos: ['B','D'],
     unlockedLocationItems: {
       B: ['ライオンの銅像','時計'],
-      C: ['時計']
+      D: ['時計']
     },
     partnerEvents: [
       { targetPhoto: 'B', message: '可視化されて分かったが、どうやら僕はこのライオンの銅像に姿を変えられてしまったらしい。そりゃ動けないわけだ。' },
-      { targetPhoto: 'C', message: '動いている時計だ。この穴の大きさに４本ぐらい、最も一般的なサイズじゃないか？' }
+      { targetPhoto: 'D', message: '動いている時計だ。この穴の大きさに４本ぐらい、最も一般的なサイズじゃないか？' }
     ],
   },
   {
@@ -115,10 +115,10 @@ export const GAME_STEPS: StepData[] = [
     acceptedPuzzleAnswers: ['掛け軸', '掛軸', 'カケジク'],
     showBlueAnswerEffect: true,
     searchTarget: { location: 'B', position: '下', item: '時計' },
-    unlockedPhotos: ['I'],
+    unlockedPhotos: ['C'],
     updatedPhotosAtTheme: {'A': 'A2'}, // ステップ1-5のお題が出たタイミングで、写真AをA3に差し替える    
     unlockedLocationItems: {
-      'I': ['ラケット'],
+      'C': ['ラケット'],
       'A': ['掛け軸']
     },
     memos: ['ルール2：相棒はライオンの銅像に姿が変わっている'],
@@ -139,38 +139,38 @@ export const GAME_STEPS: StepData[] = [
     puzzleAnswer: 'ぱっく',
     acceptedPuzzleAnswers: ['パック', 'PACK', 'pack'],
     showBlueAnswerEffect: true,
-    searchTarget: { location: 'D', position: '中', item: '卵のパック' },
+    searchTarget: { location: 'E', position: '中', item: '卵のパック' },
     unlockedPhotos: [],
-    unlockedPhotosAtTheme: ['D','E','F'],
+    unlockedPhotosAtTheme: ['E','F','G'],
     unlockedLocationItems: {
-      D: ['紙パック'],
-      E: ['パック'],
-      F: ['短い個包装パック（左）', '長い個包装パック（右）']
+      E: ['紙パック'],
+      F: ['パック'],
+      G: ['短い個包装パック（左）', '長い個包装パック（右）']
     },
     updatedPhotosAtPuzzle: {'B': 'B2'},
     partnerEvents: [
       { 
-        targetPhoto: 'D', 
+        targetPhoto: 'E', 
         availableAfterPuzzleSolved: true,
         message: 'これらは中身が想像つきそうだ。写真上で右のパックの中身は何か？',
         questionAnswer: {
           answer: '納豆',
           acceptedAnswers: ['なっとう'],
-          unlockLocation: 'D',
+          unlockLocation: 'E',
           unlockItem: '納豆のパック',
-          successMessage: 'そうだ、納豆だ！Cの選択肢に納豆のパックが追加されたぞ！'
+          successMessage: 'そうだ、納豆だ！Eの選択肢に納豆のパックが追加されたぞ！'
         }
       },
       { 
-        targetPhoto: 'D', 
+        targetPhoto: 'E', 
         availableAfterPuzzleSolved: true,
         message: 'これらは中身が想像つきそうだ。写真上で真ん中のパックの中身は何か？',
         questionAnswer: {
           answer: '卵',
           acceptedAnswers: ['たまご'],
-          unlockLocation: 'D',
+          unlockLocation: 'E',
           unlockItem: '卵のパック',
-          successMessage: 'そうだ、卵だ！Cの選択肢に卵のパックが追加されたぞ！'
+          successMessage: 'そうだ、卵だ！Eの選択肢に卵のパックが追加されたぞ！'
         }
       }
     ],
@@ -182,17 +182,17 @@ export const GAME_STEPS: StepData[] = [
     themeText: '球体',
     puzzleAnswer: '12',
     acceptedPuzzleAnswers: ['十二', 'じゅうに', 'ジュウニ', '１２'],
-    searchTarget: { location: 'E', position: '中', item: 'パック' },
-    unlockedPhotos: ['G'],
-    updatedPhotosAtPuzzle: { 'F': 'F2', 'A': 'A3' }, // ステップ1の謎が出たタイミングで、写真AをA2に差し替える
+    searchTarget: { location: 'F', position: '中', item: 'パック' },
+    unlockedPhotos: ['H'],
+    updatedPhotosAtPuzzle: { 'G': 'G2', 'A': 'A3' }, // ステップ1の謎が出たタイミングで、写真AをA2に差し替える
     unlockedLocationItems: {
       A: ['畳'],
-      G: ['浴衣'],
-      F: ['ドライヤー', 'ハブラシ', 'カミソリ']
+      H: ['浴衣'],
+      G: ['ドライヤー', 'ハブラシ', 'カミソリ']
     },
     partnerEvents: [
       { 
-        targetPhoto: 'E', 
+        targetPhoto: 'F', 
         availableAfterPuzzleSolved: true,
         message: 'なんかこれ、球体っぽくない？影の感じもそれっぽい気がする',
       }
@@ -206,8 +206,8 @@ export const GAME_STEPS: StepData[] = [
     puzzleAnswer: 'だい',
     acceptedPuzzleAnswers: ['台', '大', 'ダイ'],
     showBlueAnswerEffect: true,
-    searchTarget: { location: 'G', position: '上', item: '浴衣' },
-    acceptedSearchTargets: [{ location: 'G', position: '中', item: '浴衣' }],
+    searchTarget: { location: 'H', position: '上', item: '浴衣' },
+    acceptedSearchTargets: [{ location: 'H', position: '中', item: '浴衣' }],
     incorrectSearchMessages: [
       {
         location: 'A',
@@ -215,16 +215,16 @@ export const GAME_STEPS: StepData[] = [
         message: '掛ける部分も含めて掛け軸です',
       }
     ],
-    unlockedPhotos: ['H'],
-    updatedPhotosAtPuzzle: { 'E': 'E2', },
-    updatedPhotosAtTheme: {'A': 'A4', 'F': 'F3', 'I': 'I2' }, 
+    unlockedPhotos: ['I'],
+    updatedPhotosAtPuzzle: { 'F': 'F2', },
+    updatedPhotosAtTheme: {'A': 'A4', 'G': 'G3', 'C': 'C2' }, 
     unlockedPhotosAtTheme: ['K'],
     unlockedLocationItems: {
       A: ['机'],
-      I: ['卓球台'],
+      C: ['卓球台'],
       K: ['カウンター'],
-      F: ['洗面台'],
-      H: ['酒瓶']
+      G: ['洗面台'],
+      I: ['酒瓶']
     },
   },
   {
@@ -241,30 +241,30 @@ export const GAME_STEPS: StepData[] = [
       showBlueAnswerEffect: false,
     },
     showBlueAnswerEffect: true,
-    searchTarget: { location: 'H', position: '右', item: '酒瓶' },
+    searchTarget: { location: 'I', position: '右', item: '酒瓶' },
     incorrectSearchMessages: [
       {
-        location: 'H',
+        location: 'I',
         item: '右の缶',
         message: '提出したいもの自体を基準アイテムにはできません',
       },
     ],
     unlockedPhotos: [],
-    updatedPhotosAtPuzzle: {'A': 'A6', 'H': 'H2' },
+    updatedPhotosAtPuzzle: {'A': 'A6', 'I': 'I2' },
     unlockedLocationItems: {
       A: ['墨汁', '饅頭', '盆', '扇子', 'イス'],
-      H: ['右の缶', '左の缶']
+      I: ['右の缶', '左の缶']
     },
     partnerEvents: [
       { targetPhoto: 'A',  message: 'あれ？「き」の謎画像のタイミングで掛け軸に文字が増えたね'
         
        },
-      { targetPhoto: 'H', displayPhotoName: '？', message: 'どこかにアルミの可能性があるものはないか？',
+      { targetPhoto: 'I', displayPhotoName: '？', message: 'どこかにアルミの可能性があるものはないか？',
         availableAfterPuzzleSolved: true,
         questionAnswer: {
-          answer: 'H',
+          answer: 'I',
           choices: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K'],
-          unlockLocation: 'D',
+          unlockLocation: 'E',
           unlockItem: 'アルミ缶(右)',
           successMessage: 'どちらも形状も大きさも同じだが、見分けるのが得意でね...右がアルミ缶だ！！'
         },
@@ -282,8 +282,8 @@ export const GAME_STEPS: StepData[] = [
     unlockedPhotosAtTheme: [],
     searchTarget: { location: 'A', position: '上', item: 'イス' },
     unlockedPhotos: ['J'],
-    updatedPhotosAtPuzzle: {'H': 'H3' },
-    updatedPhotosAtTheme: {'K': 'K2','H': 'H4', 'E': 'E3' },
+    updatedPhotosAtPuzzle: {'I': 'I3' },
+    updatedPhotosAtTheme: {'K': 'K2','I': 'I4', 'F': 'F3' },
     unlockedLocationItems: {
       J: ['体重計']
     },
@@ -310,7 +310,7 @@ export const GAME_STEPS: StepData[] = [
 
 export const LAST_STEP_START_PHOTO_UPDATE: PhotoUpdateData = {
   unlockedPhotos: [],
-  // updatedPhotos: {'B': 'B', 'H': 'H5'},
+  // updatedPhotos: {'B': 'B', 'I': 'I5'},
 };
 
 export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
@@ -327,7 +327,7 @@ export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
     originalSubmittedItem: '電池',
     retryItem: 'コーラ',
     acceptedRetryItems: ['コカ・コーラ', 'こか・こーら', 'コカコーラ', 'こかこーら', 'こーら', '缶', 'かん'],
-    acceptedTargets: [{ location: 'H', item: '酒瓶', position: '左' }],
+    acceptedTargets: [{ location: 'I', item: '酒瓶', position: '左' }],
   },
   {
     stepIndex: 2,
@@ -358,8 +358,8 @@ export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
     retryItem: 'ピンポン玉',
     acceptedRetryItems: ['ピンポン玉', 'ピンポンだま', '卓球の玉', '卓球玉', '卓球だま'],
     acceptedTargets: [
-      { location: 'I', item: 'ラケット', position: '下' },
-      { location: 'I', item: '卓球台', position: '上' },
+      { location: 'C', item: 'ラケット', position: '下' },
+      { location: 'C', item: '卓球台', position: '上' },
     ],
   },
   {
@@ -392,7 +392,7 @@ export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
     originalSubmittedItem: '蜘蛛',
     retryItem: 'バスボール',
     acceptedRetryItems: ['ばすぼむ', '入浴剤', 'ばすだま', 'バスだま', '入浴球', 'にゅうよくだま', 'にゅうよくきゅう', 'ばすぼーる', 'バスぼーる', 'ばすボール', 'バスボム'],
-    acceptedTargets: [{ location: 'E', item: 'パック', position: '外' }],
+    acceptedTargets: [{ location: 'F', item: 'パック', position: '外' }],
     isPending: true,
   },
 ];

@@ -90,7 +90,7 @@ const CUT_IN_LINES = {
     { speaker: '相棒', text: '卵ごと提出しても、中に正解のアイテムを含んでいれば判定されるってことだね' },
   ],
   stepOSearchHint: [
-    { speaker: '相棒', text: 'Eのパックの中身が球体っぽいね。中身は良くわからないけどこれしかなさそう' },
+    { speaker: '相棒', text: 'Fのパックの中身が球体っぽいね。中身は良くわからないけどこれしかなさそう' },
   ],
   stepOSearchSolved: [
     { speaker: '相棒', text: '正解みたいだね。どういう球体なんだろう' },
@@ -105,7 +105,7 @@ const CUT_IN_LINES = {
     { speaker: 'ゲームマスター', text: '残念ですが、提出場所「お」は数秒間正解判定となったもののすぐに不正解判定へ変わっております。全ての提出場所が安定して正解判定となることが成功条件です' },
     { speaker: '相棒', text: '何だって！？謎の球体が変化したの...か？ひとまず「お」の場所を見に行ってみるよ' },
     { speaker: 'ゲームマスター', text: '「お」も後で再提出してもらうため、残り二つです。最後のお題「蜘蛛」の提出場所は「あ」～「き」のいずれか好きな場所で構いません' },
-    { speaker: 'ゲームマスター', text: 'しかし、Eの8個ある球体の中の一つにしか蜘蛛は存在せず、現状一度の提出で正解することは不可能です'},
+    { speaker: 'ゲームマスター', text: 'しかし、Fの8個ある球体の中の一つにしか蜘蛛は存在せず、現状一度の提出で正解することは不可能です'},
     { speaker: '相棒', text: 'ならどうすればいいんだ？' },
     { speaker: 'ゲームマスター', text: 'そこで、「外」の選択肢を解放してあげましょう。ただし、提出後に謎の球体が何かを最後に当ててもらいます' },
     { speaker: 'ゲームマスター', text: '提出場所で一カ所しかない温泉の場所が分からなければ、クリアすることはできないでしょう' },
@@ -128,7 +128,7 @@ const CUT_IN_LINES = {
   // おまけでゲームマスターが疑われるのを防ぐ目的で延長戦へ
   lastStepThreeStart: [
     { speaker: '相棒', text: '「お」の温泉に提出してみたけど、すぐに蜘蛛のフィギュアが出てきたね' },
-    { speaker: '相棒', text: 'どうやらEにある謎の球体、温泉に反応して球体が消えていくようだ。徐々にフィギュアが見えてきたので間違いない' },
+    { speaker: '相棒', text: 'どうやらFにある謎の球体、温泉に反応して球体が消えていくようだ。徐々にフィギュアが見えてきたので間違いない' },
   ],
   bonusStart: [
     { speaker: '相棒', text: '相棒は気づいていたみたいだけど、ずいぶんと助けてくれたみたいだね。ゲームマスター？' },
@@ -907,7 +907,7 @@ export default function GameInterface() {
     e.preventDefault();
     if (
       matchesTextAnswer(hotSpringAnswer, ['お'])
-      && searchLocation === 'E'
+      && searchLocation === 'F'
       && searchItem === '蜘蛛'
       && searchPosition === '外'
     ) {
@@ -920,8 +920,8 @@ export default function GameInterface() {
       setSearchPosition(POSITIONS[0]);
       setLastStep(3);
       setUnlockedPhotos(prev => Array.from(new Set([...prev, 'き'])));
-      setPhotoFiles(prev => ({ ...prev, き: 'き', E: 'E4' }));
-      setPhotoUpdateMarkers(['き', 'E']);
+      setPhotoFiles(prev => ({ ...prev, き: 'き', F: 'F4' }));
+      setPhotoUpdateMarkers(['き', 'F']);
       showCorrectThenCutIn(CUT_IN_LINES.lastStepThreeStart, getLastStepLogIndex(3), true);
       return;
     }
@@ -1021,7 +1021,7 @@ export default function GameInterface() {
   const isLastStepSpiderStage = lastStep === 2 && Boolean(lastStepTwoAnswerLog);
   const lastStepTwoItems = Array.from(new Set([
     ...getAvailableItemsForLocation(searchLocation),
-    ...(searchLocation === 'E' ? ['蜘蛛'] : []),
+    ...(searchLocation === 'F' ? ['蜘蛛'] : []),
   ]));
   const visibleLastStepLogSteps: (1 | 2 | 3)[] = lastStep === 0
     ? []
@@ -1537,7 +1537,7 @@ export default function GameInterface() {
                     <div className="rounded-xl border border-rose-500/30 bg-rose-950/30 p-3 shadow-[0_0_18px_rgba(244,63,94,0.12)]">
                       <h3 className="text-sm font-bold text-rose-300">最終提出</h3>
                       <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                        球体の再提出と、Eの謎の球体が何だったのかを同時に回答してください。
+                        球体の再提出と、Fの謎の球体が何だったのかを同時に回答してください。
                       </p>
                     </div>
 
@@ -1632,7 +1632,7 @@ export default function GameInterface() {
                     </div>
 
                     <label className="block rounded-xl border border-cyan-500/30 bg-cyan-950/25 p-3">
-                      <span className="mb-1 block text-xs font-bold text-cyan-300">Eの謎の球体は何だった？</span>
+                      <span className="mb-1 block text-xs font-bold text-cyan-300">Fの謎の球体は何だった？</span>
                       <input
                         type="text"
                         value={finalSphereAnswer}
