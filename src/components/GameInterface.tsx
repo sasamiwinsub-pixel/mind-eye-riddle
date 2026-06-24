@@ -114,7 +114,7 @@ const CUT_IN_LINES = {
   ],
   lastStepTwoStart:[
     { speaker: '相棒', text: 'じゃあ、蜘蛛を提出してみよう！' },
-    { speaker: '相棒', text: 'しかし、「パック」の「中」という指定では、ランダムに一つ謎の球体がが選ばれて蜘蛛が当たるか分からないな' },
+    { speaker: '相棒', text: 'しかし、「パック」の「中」という指定では、ランダムに一つ謎の球体が選ばれて蜘蛛が当たるか分からないな' },
     { speaker: '相棒', text: '一度で確実に蜘蛛が提出される指定の仕方をしよう' },
   ],
   // lastStepTwoStart: [
@@ -132,8 +132,9 @@ const CUT_IN_LINES = {
   ],
   bonusStart: [
     { speaker: '相棒', text: '相棒は気づいていたみたいだけど、ずいぶんと助けてくれたみたいだね。ゲームマスター？' },
-    { speaker: 'ゲームマスター', text: '気づいていましたか。実はお題の量も削ったり、少々肩入れをしすぎたので、後で疑われてしまうかもしれません' },
+    { speaker: 'ゲームマスター', text: '気づいていましたか。実はお題をいくつか消して選択肢を解放したり、少々肩入れをしすぎたので、後で疑われてしまうかもしれません' },
     { speaker: '相棒', text: 'うーん、どうする相棒？削ったお題も出してもらって、疑いの眼を向けられないようにしてあげる？' },
+    { speaker: 'ゲームマスター', text: 'ありがたい申し出ですが、何も手助けできないですよ？' },
   ],
 } satisfies Record<string, CutInLine[]>;
 
@@ -891,7 +892,7 @@ export default function GameInterface() {
 
   const handleLastStepTwoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (matchesTextAnswer(hotSpringAnswer, ['き'])) {
+    if (matchesTextAnswer(hotSpringAnswer, ['お'])) {
       setErrorMsg('');
       setLastStepTwoAnswerLog(`提出場所：${hotSpringAnswer}`);
       setHotSpringAnswer('');
@@ -905,14 +906,16 @@ export default function GameInterface() {
   const handleLastStepSpiderSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (
-      searchLocation === 'E'
+      matchesTextAnswer(hotSpringAnswer, ['お'])
+      && searchLocation === 'E'
       && searchItem === '蜘蛛'
       && searchPosition === '外'
     ) {
       setErrorMsg('');
       setLastStepOneAnswerLog(
-        `場所：${searchLocation} / 基準アイテム：${searchItem} / 位置：${searchPosition}`
+        `提出場所：${hotSpringAnswer} / 場所：${searchLocation} / 基準アイテム：${searchItem} / 位置：${searchPosition}`
       );
+      setHotSpringAnswer('');
       setSearchItem('');
       setSearchPosition(POSITIONS[0]);
       setLastStep(3);
@@ -1465,14 +1468,28 @@ export default function GameInterface() {
                 ) : isLastStepSpiderStage ? (
                   <form onSubmit={handleLastStepSpiderSubmit} className="flex flex-col gap-3">
                     <div className="rounded-xl border border-amber-500/30 bg-amber-950/30 p-3">
-                      <h3 className="text-sm font-bold text-amber-300">提出場所「お」に「蜘蛛」を提出</h3>
+                      <h3 className="text-sm font-bold text-amber-300">提出場所「？」に「蜘蛛」を提出</h3>
                       <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                        温泉だと分かった提出場所「お」へ、お題「蜘蛛」を提出してください。位置に「外」が追加されています。
+                        提出場所も選び、そこへお題「蜘蛛」を提出してください。位置に「外」が追加されています。
                       </p>
                     </div>
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-bold text-amber-300">提出場所</span>
+                      <select
+                        value={hotSpringAnswer}
+                        onChange={(e) => setHotSpringAnswer(e.target.value)}
+                        required
+                        className="w-full rounded-lg border border-amber-500/40 bg-slate-800 p-3 text-center text-white focus:border-amber-400 focus:outline-none"
+                      >
+                        <option value="">選択してください</option>
+                        {['あ', 'い', 'う', 'え', 'お', 'か', 'き', 'く', 'け'].map(place => (
+                          <option key={place} value={place}>{place}</option>
+                        ))}
+                      </select>
+                    </label>
                     <div className="grid grid-cols-2 gap-2">
                       <label className="block">
-                        <span className="mb-1 block text-xs text-slate-400">場所</span>
+                        <span className="mb-1 block text-xs text-slate-400">写真の場所</span>
                         <select
                           value={searchLocation}
                           onChange={(e) => {
