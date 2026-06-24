@@ -1048,6 +1048,21 @@ export default function GameInterface() {
       ? 'bg-cyan-500 text-slate-950'
       : 'bg-indigo-500 text-white';
   const isAllClear = bonusIndex >= BONUS_STEP_SUBMISSIONS.length;
+  const shareText = isAllClear
+    ? '心の眼で全ての謎を解き明かしました'
+    : '心の眼で謎を解き明かしました';
+
+  const openXPost = () => {
+    const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    const origin = configuredSiteUrl || window.location.origin;
+    const sharePath = isAllClear ? '/share/allclear' : '/share/clear';
+    const shareUrl = new URL(sharePath, origin).toString();
+    const intentUrl = new URL('https://twitter.com/intent/tweet');
+
+    intentUrl.searchParams.set('text', shareText);
+    intentUrl.searchParams.set('url', shareUrl);
+    window.open(intentUrl.toString(), '_blank', 'noopener,noreferrer');
+  };
 
   if (!hasRestoredProgress) {
     return <div className="mx-auto h-[100dvh] max-w-md bg-slate-950" />;
@@ -1254,8 +1269,15 @@ export default function GameInterface() {
           </div>
           <h1 className="mt-2 text-3xl font-black tracking-wider text-white">ゲームクリア</h1>
           <p className="mt-4 rounded-2xl border border-cyan-300/20 bg-slate-900/70 px-5 py-4 text-lg font-bold leading-relaxed text-cyan-50 shadow-xl backdrop-blur">
-            {isAllClear ? '心の眼で全ての謎を解き明かしました' : '心の眼で謎を解き明かしました'}
+            {shareText}
           </p>
+          <button
+            type="button"
+            onClick={openXPost}
+            className="mt-5 rounded-xl border border-slate-500/60 bg-slate-900/80 px-6 py-3 font-black text-white transition-colors hover:bg-slate-800"
+          >
+            Xでポストする
+          </button>
           {!isAllClear && (
             <button
               type="button"
