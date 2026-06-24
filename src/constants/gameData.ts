@@ -95,15 +95,15 @@ export const GAME_STEPS: StepData[] = [
     themeText: 'たんさん',
     puzzleAnswer: 'PM',
     acceptedPuzzleAnswers: ['pm', '午後', 'ごご', 'ゴゴ'],
-    searchTarget: { location: 'D', position: '中', item: '時計' },
-    unlockedPhotos: ['B','D'],
+    searchTarget: { location: 'C', position: '中', item: '時計' },
+    unlockedPhotos: ['B','C'],
     unlockedLocationItems: {
       B: ['ライオンの銅像','時計'],
-      D: ['時計']
+      C: ['時計']
     },
     partnerEvents: [
       { targetPhoto: 'B', message: '可視化されて分かったが、どうやら僕はこのライオンの銅像に姿を変えられてしまったらしい。そりゃ動けないわけだ。' },
-      { targetPhoto: 'D', message: '動いている時計だ。この穴の大きさに４本ぐらい、最も一般的なサイズじゃないか？' }
+      { targetPhoto: 'C', message: '動いている時計だ。この穴の大きさに４本ぐらい、最も一般的なサイズじゃないか？' }
     ],
   },
   {
@@ -115,10 +115,10 @@ export const GAME_STEPS: StepData[] = [
     acceptedPuzzleAnswers: ['掛け軸', '掛軸', 'カケジク'],
     showBlueAnswerEffect: true,
     searchTarget: { location: 'B', position: '下', item: '時計' },
-    unlockedPhotos: ['C'],
+    unlockedPhotos: ['D'],
     updatedPhotosAtTheme: {'A': 'A2'}, // ステップ1-5のお題が出たタイミングで、写真AをA3に差し替える    
     unlockedLocationItems: {
-      'C': ['ラケット'],
+      'D': ['ラケット'],
       'A': ['掛け軸']
     },
     memos: ['ルール2：相棒はライオンの銅像に姿が変わっている'],
@@ -217,11 +217,11 @@ export const GAME_STEPS: StepData[] = [
     ],
     unlockedPhotos: ['I'],
     updatedPhotosAtPuzzle: { 'F': 'F2', },
-    updatedPhotosAtTheme: {'A': 'A4', 'G': 'G3', 'C': 'C2' }, 
+    updatedPhotosAtTheme: {'A': 'A4', 'G': 'G3', 'D': 'D2' }, 
     unlockedPhotosAtTheme: ['K'],
     unlockedLocationItems: {
       A: ['机'],
-      C: ['卓球台'],
+      D: ['卓球台'],
       K: ['カウンター'],
       G: ['洗面台'],
       I: ['酒瓶']
@@ -302,7 +302,7 @@ export const GAME_STEPS: StepData[] = [
       K: ['暖簾', '募金箱']
     },
     partnerEvents: [
-      { targetPhoto: 'お',  message: 'おかしいな...Ｅの謎の球体を提出した場所に木のフィギュア？が出現してる...'        
+      { targetPhoto: 'お',  message: 'おかしいな...Fの謎の球体を提出した場所に花のフィギュアが出現してる...'        
        },
       ]
   },
@@ -354,12 +354,12 @@ export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
     stepIndex: 4,
     label: '3',
     originalSubmittedItem: 'バスボール',
-    logDisplayItem: '球体',
+    logDisplayItem: 'Fの謎の球体',
     retryItem: 'ピンポン玉',
     acceptedRetryItems: ['ピンポン玉', 'ピンポンだま', '卓球の玉', '卓球玉', '卓球だま'],
     acceptedTargets: [
-      { location: 'C', item: 'ラケット', position: '下' },
-      { location: 'C', item: '卓球台', position: '上' },
+      { location: 'D', item: 'ラケット', position: '下' },
+      { location: 'D', item: '卓球台', position: '上' },
     ],
   },
   {

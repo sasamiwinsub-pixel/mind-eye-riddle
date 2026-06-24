@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
@@ -90,6 +90,7 @@ const CUT_IN_LINES = {
     { speaker: '相棒', text: '卵ごと提出しても、中に正解のアイテムを含んでいれば判定されるってことだね' },
   ],
   stepOSearchHint: [
+    { speaker: '相棒', text: 'うーん...。' },
     { speaker: '相棒', text: 'Fのパックの中身が球体っぽいね。中身は良くわからないけどこれしかなさそう' },
   ],
   stepOSearchSolved: [
@@ -103,7 +104,7 @@ const CUT_IN_LINES = {
   lastStepStart: [
     { speaker: '相棒', text: 'あと一つ提出するだけだ！' },
     { speaker: 'ゲームマスター', text: '残念ですが、提出場所「お」は数秒間正解判定となったもののすぐに不正解判定へ変わっております。全ての提出場所が安定して正解判定となることが成功条件です' },
-    { speaker: '相棒', text: '何だって！？謎の球体が変化したの...か？ひとまず「お」の場所を見に行ってみるよ' },
+    { speaker: '相棒', text: '何だって！？謎の球体が変化したの...か？ひとまず「お」の場所を再確認しよう' },
     { speaker: 'ゲームマスター', text: '「お」も後で再提出してもらうため、残り二つです。最後のお題「蜘蛛」の提出場所は「あ」～「き」のいずれか好きな場所で構いません' },
     { speaker: 'ゲームマスター', text: 'しかし、Fの8個ある球体の中の一つにしか蜘蛛は存在せず、現状一度の提出で正解することは不可能です'},
     { speaker: '相棒', text: 'ならどうすればいいんだ？' },
@@ -919,13 +920,12 @@ export default function GameInterface() {
       setSearchItem('');
       setSearchPosition(POSITIONS[0]);
       setLastStep(3);
-      setUnlockedPhotos(prev => Array.from(new Set([...prev, 'き'])));
-      setPhotoFiles(prev => ({ ...prev, き: 'き', F: 'F4' }));
-      setPhotoUpdateMarkers(['き', 'F']);
+      setPhotoFiles(prev => ({ ...prev, お: 'お2', F: 'F4' }));
+      setPhotoUpdateMarkers(['お', 'F']);
       showCorrectThenCutIn(CUT_IN_LINES.lastStepThreeStart, getLastStepLogIndex(3), true);
       return;
     }
-    setErrorMsg('提出場所「お」へ、お題「蜘蛛」を提出する内容になっていません。');
+    setErrorMsg('お題「蜘蛛」を提出できません。');
   };
 
   const handleBonusStepOneSubmit = (e: React.FormEvent) => {
@@ -957,11 +957,7 @@ export default function GameInterface() {
         && submission.item === acceptedTarget.item
       ));
       return submission
-        && matchesAcceptedTarget
-        && matchesTextAnswer(submission.specifiedName, [
-          target.retryItem,
-          ...(target.acceptedRetryItems || []),
-        ]);
+        && matchesAcceptedTarget;
     });
     const isSphereAnswerCorrect = matchesTextAnswer(finalSphereAnswer, [
       'バスボール',
@@ -981,6 +977,10 @@ export default function GameInterface() {
     if (allCorrect && isSphereAnswerCorrect) {
       setErrorMsg('');
       setIsGameCleared(true);
+    } else if (allCorrect) {
+      setErrorMsg('球体の再提出は合っています。Fの謎の球体が何だったのかを見直しましょう。');
+    } else if (isSphereAnswerCorrect) {
+      setErrorMsg('Fの謎の球体の答えは合っています。球体の再提出内容を見直しましょう。');
     } else {
       setErrorMsg('どこかの提出内容が違います。これまでの記録を見直してみましょう。');
     }
@@ -1047,6 +1047,7 @@ export default function GameInterface() {
     : activeCutInLine?.speaker === '自分'
       ? 'bg-cyan-500 text-slate-950'
       : 'bg-indigo-500 text-white';
+  const isAllClear = bonusIndex >= BONUS_STEP_SUBMISSIONS.length;
 
   if (!hasRestoredProgress) {
     return <div className="mx-auto h-[100dvh] max-w-md bg-slate-950" />;
@@ -1121,6 +1122,7 @@ export default function GameInterface() {
               <h3 className="text-sm font-bold text-amber-300">「アルミ」を再提出</h3>
               <p className="mt-1 text-xs leading-relaxed text-slate-300">
                 場所・アイテム・位置を選択し、転送対象の名称も指定してください。
+                ※先ほどと同じアルミ缶は提出できません
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -1243,8 +1245,8 @@ export default function GameInterface() {
           <p className="mb-3 text-xs font-black tracking-[0.35em] text-cyan-300">GAME CLEAR</p>
           <div className="relative w-full max-w-sm aspect-square">
             <Image
-              src="/images/clear.png"
-              alt="ゲームクリア"
+              src={isAllClear ? '/images/allclear.png' : '/images/clear.png'}
+              alt={isAllClear ? 'オールクリア' : 'ゲームクリア'}
               fill
               priority
               className="object-contain drop-shadow-[0_0_30px_rgba(34,211,238,0.25)]"
@@ -1252,23 +1254,25 @@ export default function GameInterface() {
           </div>
           <h1 className="mt-2 text-3xl font-black tracking-wider text-white">ゲームクリア</h1>
           <p className="mt-4 rounded-2xl border border-cyan-300/20 bg-slate-900/70 px-5 py-4 text-lg font-bold leading-relaxed text-cyan-50 shadow-xl backdrop-blur">
-            心の眼で全ての謎を解き明かしました
+            {isAllClear ? '心の眼で全ての謎を解き明かしました' : '心の眼で謎を解き明かしました'}
           </p>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('main');
-              setBonusMessage('');
-              setShowBonusChoice(false);
-              setShowBonus(true);
-              if (bonusStep === 1 && bonusIndex === 0) {
-                startCutIn(CUT_IN_LINES.bonusStart, getBonusStepLogIndex(1));
-              }
-            }}
-            className="mt-5 rounded-xl border border-amber-300/40 bg-amber-500/15 px-6 py-3 font-black text-amber-100 transition-colors hover:bg-amber-500/25"
-          >
-            おまけの再提出に挑戦する
-          </button>
+          {!isAllClear && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('main');
+                setBonusMessage('');
+                setShowBonusChoice(false);
+                setShowBonus(true);
+                if (bonusStep === 1 && bonusIndex === 0) {
+                  startCutIn(CUT_IN_LINES.bonusStart, getBonusStepLogIndex(1));
+                }
+              }}
+              className="mt-5 rounded-xl border border-amber-300/40 bg-amber-500/15 px-6 py-3 font-black text-amber-100 transition-colors hover:bg-amber-500/25"
+            >
+              おまけの再提出に挑戦する
+            </button>
+          )}
         </main>
       </div>
     );
@@ -1615,17 +1619,6 @@ export default function GameInterface() {
                                 ))}
                               </select>
                             </label>
-                            <label className="mt-2 block">
-                              <span className="mb-1 block text-[11px] font-bold text-rose-300">名称指定（必須）</span>
-                              <input
-                                type="text"
-                                value={submission.specifiedName}
-                                onChange={(e) => updateFinalSubmission(index, 'specifiedName', e.target.value)}
-                                required
-                                className="w-full rounded-lg border border-rose-500/40 bg-slate-900 p-2 text-sm text-white focus:border-rose-400 focus:outline-none"
-                                placeholder="転送するものの名称"
-                              />
-                            </label>
                           </div>
                         );
                       })}
@@ -1768,6 +1761,8 @@ export default function GameInterface() {
             
             {/* 相棒と話すボタン（リスト上部） */}
             {(() => {
+              if (lastStep > 0 || isGameCleared || showBonus) return null;
+
               const isCurrentPuzzleSolved = phase === 'search' || isPuzzleSolvedPending;
               const availablePartnerEvents = currentStep.partnerEvents?.filter(event => (
                 unlockedPhotos.includes(event.targetPhoto)
@@ -1793,7 +1788,7 @@ export default function GameInterface() {
 
             {/* Partner Message Area (in Photos Tab) */}
             {(() => {
-              if (!activePartnerMessage) return null;
+              if (!activePartnerMessage || lastStep > 0 || isGameCleared || showBonus) return null;
               const activeEventIndex = currentStep.partnerEvents?.findIndex(e => e.message === activePartnerMessage) ?? -1;
               const activeEvent = activeEventIndex >= 0 ? currentStep.partnerEvents?.[activeEventIndex] : undefined;
               const qKey = activeEvent ? getPartnerEventKey(currentStep.id, activeEventIndex) : '';

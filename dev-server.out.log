@@ -1,0 +1,33 @@
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://127.0.0.1:3000
+- Network:       http://127.0.0.1:3000
+✓ Ready in 365ms
+
+ GET / 200 in 1801ms (next.js: 1672ms, application-code: 129ms)
+✓ Compiled in 58ms
+ GET / 200 in 124ms (next.js: 55ms, application-code: 69ms)
+✓ Compiled in 49ms
+ GET / 200 in 103ms (next.js: 49ms, application-code: 54ms)
+✓ Compiled in 78ms
+ GET / 200 in 99ms (next.js: 53ms, application-code: 46ms)
+✓ Compiled in 43ms
+ GET / 200 in 100ms (next.js: 62ms, application-code: 38ms)
+✓ Compiled in 89ms
+ GET / 200 in 116ms (next.js: 61ms, application-code: 54ms)
+✓ Compiled in 72ms
+ GET / 200 in 106ms (next.js: 56ms, application-code: 50ms)
+✓ Compiled in 83ms
+ GET / 200 in 92ms (next.js: 60ms, application-code: 33ms)
+✓ Compiled in 95ms
+ GET / 200 in 114ms (next.js: 62ms, application-code: 53ms)
+✓ Compiled in 102ms
+ GET / 200 in 117ms (next.js: 76ms, application-code: 41ms)
+ GET / 200 in 66ms (next.js: 3ms, application-code: 63ms)
+✓ Compiled in 93ms
+ GET / 200 in 139ms (next.js: 89ms, application-code: 50ms)
+✓ Compiled in 41ms
+ GET / 200 in 144ms (next.js: 80ms, application-code: 64ms)
+✓ Compiled in 67ms
+ GET / 200 in 97ms (next.js: 52ms, application-code: 45ms)
+✓ Compiled in 111ms
+ GET / 200 in 136ms (next.js: 92ms, application-code: 44ms)
