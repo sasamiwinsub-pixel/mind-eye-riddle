@@ -32,7 +32,7 @@ export default function AllClearSharePage() {
       <section className="w-full max-w-md rounded-3xl border border-amber-300/20 bg-slate-900/80 p-6 text-center shadow-2xl">
         <p className="mb-3 text-xs font-black tracking-[0.35em] text-amber-300">ALL CLEAR</p>
         <div className="relative mx-auto aspect-square w-full max-w-sm">
-          <Image src={imageUrl} alt={title} fill priority className="object-contain" />
+          <Image src={imageUrl} alt={title} fill priority sizes="(max-width: 448px) 100vw, 384px" className="object-contain" />
         </div>
         <h1 className="mt-4 text-2xl font-black text-white">{title}</h1>
         <p className="mt-3 text-sm leading-relaxed text-slate-300">

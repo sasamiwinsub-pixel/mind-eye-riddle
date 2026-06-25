@@ -264,7 +264,7 @@ export const GAME_STEPS: StepData[] = [
         questionAnswer: {
           answer: 'I',
           choices: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K'],
-          unlockLocation: 'E',
+          unlockLocation: 'I',
           unlockItem: 'アルミ缶(右)',
           successMessage: 'どちらも形状も大きさも同じだが、見分けるのが得意でね...右がアルミ缶だ！！'
         },
@@ -313,6 +313,31 @@ export const LAST_STEP_START_PHOTO_UPDATE: PhotoUpdateData = {
   // updatedPhotos: {'B': 'B', 'I': 'I5'},
 };
 
+export const BONUS_STEP_START_PHOTO_UPDATE: PhotoUpdateData = {
+  unlockedPhotos: [],
+  updatedPhotos: {
+    A: 'A6',
+    B: 'B',
+    C: 'C',
+    D: 'D2',
+    E: 'E',
+    F: 'F4',
+    G: 'G3',
+    H: 'H',
+    I: 'I5',
+    J: 'J',
+    K: 'K2',
+    L: 'L',
+    お: 'お2',
+  },
+};
+
+export const BONUS_STEP_TWO_START_PHOTO_UPDATE: PhotoUpdateData = {
+  unlockedPhotos: [],
+  updatedPhotos: {
+  },
+};
+
 export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
   {
     stepIndex: 0,
@@ -339,6 +364,7 @@ export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
       { location: 'A', item: '盆', position: '下' },
       { location: 'A', item: '湯呑', position: '下' },
       { location: 'A', item: 'ティーパック', position: '下' },
+      { location: 'A', item: '灰皿', position: '下' },
       { location: 'A', item: '畳', position: '上' },
     ],
   },
@@ -375,7 +401,7 @@ export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
     label: '5',
     originalSubmittedItem: '缶',
     retryItem: '1円玉',
-    acceptedRetryItems: ['1','１','1円玉', '1えんだま', 'いちえんだま', 'イチエンダマ', '1円', '1えん', 'いちえん', 'イチエン'],
+    acceptedRetryItems: ['1','１','1円玉', '1えんだま', 'いちえんだま', 'イチエンダマ', '1円', '1えん', 'いちえん', 'イチエン', '一円', '一','一円玉'],
     acceptedTargets: [{ location: 'K', item: '募金箱', position: '中' }],
     excludeFromFinalSubmission: true,
   },
@@ -406,7 +432,7 @@ export const FINAL_STEP_SUBMISSIONS = RESUBMISSION_TARGETS.filter(
 );
 
 export const BONUS_STEP_SUBMISSIONS = LAST_STEP_SUBMISSIONS.filter(
-  submission => submission.stepIndex !== 4 && submission.stepIndex !== 8
+  submission => ![0, 4, 6, 7, 8].includes(submission.stepIndex)
 );
 
 export const LOCATIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];

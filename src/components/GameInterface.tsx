@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { BONUS_STEP_SUBMISSIONS, FINAL_STEP_SUBMISSIONS, GAME_STEPS, LAST_STEP_START_PHOTO_UPDATE, LAST_STEP_SUBMISSIONS, LOCATIONS, POSITIONS, type LastStepSubmissionData } from '@/constants/gameData';
+import { BONUS_STEP_START_PHOTO_UPDATE, BONUS_STEP_SUBMISSIONS, BONUS_STEP_TWO_START_PHOTO_UPDATE, FINAL_STEP_SUBMISSIONS, GAME_STEPS, LAST_STEP_START_PHOTO_UPDATE, LAST_STEP_SUBMISSIONS, LOCATIONS, POSITIONS, type LastStepSubmissionData, type PhotoUpdateData } from '@/constants/gameData';
 import { loadSavedSession, saveGameProgress } from '@/lib/gameProgressStorage';
 
 type Tab = 'main' | 'map' | 'photos' | 'log';
@@ -36,6 +36,14 @@ type SavedGameProgress = {
   lastStepOneAnswerLog: string | null;
   lastStepTwoAnswerLog: string | null;
   finalSphereAnswer?: string;
+  showBonus?: boolean;
+  bonusStep?: 1 | 2;
+  bonusLastStepOneName?: string;
+  bonusStepOneAnswerLog?: string | null;
+  bonusIndex?: number;
+  bonusSubmissions?: FinalSubmission[];
+  bonusMessage?: string;
+  showBonusChoice?: boolean;
   isGameCleared: boolean;
   finalSubmissions: FinalSubmission[];
   showCorrectOverlay: boolean;
@@ -133,10 +141,15 @@ const CUT_IN_LINES = {
   ],
   bonusStart: [
     { speaker: '相棒', text: '相棒は気づいていたみたいだけど、ずいぶんと助けてくれたみたいだね。ゲームマスター？' },
-    { speaker: 'ゲームマスター', text: '気づいていましたか。実はお題をいくつか消して選択肢を解放したり、少々肩入れをしすぎたので、後で疑われてしまうかもしれません' },
+    { speaker: 'ゲームマスター', text: '気づいていましたか。実は「外」の選択肢を解放するためのステップを一つ飛ばしておりまして...、少々肩入れをしすぎたので、後で疑われてしまうかもしれません' },
     { speaker: '相棒', text: 'うーん、どうする相棒？削ったお題も出してもらって、疑いの眼を向けられないようにしてあげる？' },
-    { speaker: 'ゲームマスター', text: 'ありがたい申し出ですが、何も手助けできないですよ？' },
+    { speaker: 'ゲームマスター', text: 'ありがたい申し出ですが、何も手助けできないですよ？回答時に提出物の名称も必要になりますし...' },
   ],
+  bonusStepTwoStart: [
+     { speaker: '相棒', text: 'まさか募金箱のお金を移動させるなんて...。立山君はこういう時に頼もしいけど、友人の横山としては倫理観が心配だね' },
+     { speaker: 'ゲームマスター', text: 'ご安心ください。元々空の募金箱に2枚の硬貨、11円を事前に募金をしておきました。窃盗には当たらないのでご安心を' },
+     { speaker: 'ゲームマスター', text: 'それでは、残りの別解が存在するもの全て、4つを回答してください。' },
+  ]
 } satisfies Record<string, CutInLine[]>;
 
 const getLastStepLogIndex = (step: 1 | 2 | 3) => GAME_STEPS.length + step - 1;
@@ -225,6 +238,29 @@ const isSavedGameProgress = (value: unknown): value is SavedGameProgress => {
     && (value.lastStepOneAnswerLog === null || typeof value.lastStepOneAnswerLog === 'string')
     && (value.lastStepTwoAnswerLog === null || typeof value.lastStepTwoAnswerLog === 'string')
     && (value.finalSphereAnswer === undefined || typeof value.finalSphereAnswer === 'string')
+    && (value.showBonus === undefined || typeof value.showBonus === 'boolean')
+    && (value.bonusStep === undefined || value.bonusStep === 1 || value.bonusStep === 2)
+    && (value.bonusLastStepOneName === undefined || typeof value.bonusLastStepOneName === 'string')
+    && (value.bonusStepOneAnswerLog === undefined || value.bonusStepOneAnswerLog === null || typeof value.bonusStepOneAnswerLog === 'string')
+    && (
+      value.bonusIndex === undefined
+      || (
+        typeof value.bonusIndex === 'number'
+        && Number.isInteger(value.bonusIndex)
+        && value.bonusIndex >= 0
+        && value.bonusIndex <= BONUS_STEP_SUBMISSIONS.length
+      )
+    )
+    && (
+      value.bonusSubmissions === undefined
+      || (
+        Array.isArray(value.bonusSubmissions)
+        && value.bonusSubmissions.length === BONUS_STEP_SUBMISSIONS.length
+        && value.bonusSubmissions.every(isFinalSubmission)
+      )
+    )
+    && (value.bonusMessage === undefined || typeof value.bonusMessage === 'string')
+    && (value.showBonusChoice === undefined || typeof value.showBonusChoice === 'boolean')
     && typeof value.isGameCleared === 'boolean'
     && Array.isArray(value.finalSubmissions)
     && (
@@ -303,6 +339,7 @@ export default function GameInterface() {
   const [showBonus, setShowBonus] = useState(false);
   const [bonusStep, setBonusStep] = useState<1 | 2>(1);
   const [bonusLastStepOneName, setBonusLastStepOneName] = useState('');
+  const [bonusStepOneAnswerLog, setBonusStepOneAnswerLog] = useState<string | null>(null);
   const [bonusIndex, setBonusIndex] = useState(0);
   const [bonusSubmissions, setBonusSubmissions] = useState<FinalSubmission[]>(() => createInitialSubmissions(BONUS_STEP_SUBMISSIONS));
   const [bonusMessage, setBonusMessage] = useState('');
@@ -398,6 +435,14 @@ export default function GameInterface() {
         setLastStepOneAnswerLog(savedGame.lastStepOneAnswerLog);
         setLastStepTwoAnswerLog(savedGame.lastStepTwoAnswerLog);
         setFinalSphereAnswer(savedGame.finalSphereAnswer ?? '');
+        setShowBonus(savedGame.showBonus ?? false);
+        setBonusStep(savedGame.bonusStep ?? 1);
+        setBonusLastStepOneName(savedGame.bonusLastStepOneName ?? '');
+        setBonusStepOneAnswerLog(savedGame.bonusStepOneAnswerLog ?? null);
+        setBonusIndex(savedGame.bonusIndex ?? 0);
+        setBonusSubmissions(savedGame.bonusSubmissions ?? createInitialSubmissions(BONUS_STEP_SUBMISSIONS));
+        setBonusMessage(savedGame.bonusMessage ?? '');
+        setShowBonusChoice(savedGame.showBonusChoice ?? false);
         setIsGameCleared(savedGame.isGameCleared);
         setFinalSubmissions(
           savedGame.finalSubmissions.length === FINAL_STEP_SUBMISSIONS.length
@@ -458,6 +503,14 @@ export default function GameInterface() {
       lastStepOneAnswerLog,
       lastStepTwoAnswerLog,
       finalSphereAnswer,
+      showBonus,
+      bonusStep,
+      bonusLastStepOneName,
+      bonusStepOneAnswerLog,
+      bonusIndex,
+      bonusSubmissions,
+      bonusMessage,
+      showBonusChoice,
       isGameCleared,
       finalSubmissions,
       showCorrectOverlay,
@@ -489,6 +542,12 @@ export default function GameInterface() {
   }, [
     activeTab,
     applyLastStepPhotoUpdateAfterCutIn,
+    bonusIndex,
+    bonusLastStepOneName,
+    bonusMessage,
+    bonusStep,
+    bonusStepOneAnswerLog,
+    bonusSubmissions,
     cutInIndex,
     cutInLines,
     cutInLogByStep,
@@ -522,6 +581,8 @@ export default function GameInterface() {
     searchLocation,
     searchPosition,
     showCorrectOverlay,
+    showBonus,
+    showBonusChoice,
     showRulesInfoPrompt,
     solvedPartnerQuestions,
     stepOSearchHintStartedAt,
@@ -648,8 +709,12 @@ export default function GameInterface() {
   };
 
   const applyLastStepStartPhotoUpdate = () => {
-    const newlyUnlocked = LAST_STEP_START_PHOTO_UPDATE.unlockedPhotos || [];
-    const updatedPhotos = LAST_STEP_START_PHOTO_UPDATE.updatedPhotos || {};
+    applyPhotoUpdate(LAST_STEP_START_PHOTO_UPDATE);
+  };
+
+  const applyPhotoUpdate = (photoUpdate: PhotoUpdateData) => {
+    const newlyUnlocked = photoUpdate.unlockedPhotos || [];
+    const updatedPhotos = photoUpdate.updatedPhotos || {};
     const newlyUpdated = Object.keys(updatedPhotos);
 
     setUnlockedPhotos(prev => Array.from(new Set([...prev, ...newlyUnlocked])));
@@ -664,6 +729,17 @@ export default function GameInterface() {
       return next;
     });
     setPhotoUpdateMarkers([...newlyUnlocked, ...newlyUpdated]);
+  };
+
+  const startBonus = () => {
+    applyPhotoUpdate(BONUS_STEP_START_PHOTO_UPDATE);
+    setActiveTab('main');
+    setBonusMessage('');
+    setShowBonusChoice(false);
+    setShowBonus(true);
+    if (bonusStep === 1 && bonusIndex === 0) {
+      startCutIn(CUT_IN_LINES.bonusStart, getBonusStepLogIndex(1));
+    }
   };
 
   const closeCorrectOverlay = () => {
@@ -930,17 +1006,26 @@ export default function GameInterface() {
 
   const handleBonusStepOneSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const bonusStepOneTarget = LAST_STEP_SUBMISSIONS.find(submission => submission.stepIndex === 6);
+    const acceptedNames = bonusStepOneTarget
+      ? [bonusStepOneTarget.retryItem, ...(bonusStepOneTarget.acceptedRetryItems || [])]
+      : ['1円玉'];
+
     if (
       searchLocation === 'K'
       && searchItem === '募金箱'
       && searchPosition === '中'
-      && matchesTextAnswer(bonusLastStepOneName, ['1円玉'])
+      && matchesTextAnswer(bonusLastStepOneName, acceptedNames)
     ) {
       setBonusMessage('');
+      setBonusStepOneAnswerLog(
+        `場所：${searchLocation} / 基準アイテム：${searchItem} / 位置：${searchPosition} / 名称指定：${bonusLastStepOneName}`
+      );
       setSearchItem('');
       setBonusLastStepOneName('');
       setBonusStep(2);
-      showCorrectThenCutIn(CUT_IN_LINES.lastStepThreeStart, getBonusStepLogIndex(2), true);
+      applyPhotoUpdate(BONUS_STEP_TWO_START_PHOTO_UPDATE);
+      showCorrectThenCutIn(CUT_IN_LINES.bonusStepTwoStart, getBonusStepLogIndex(2), true);
       return;
     }
     setBonusMessage('場所、位置、アイテム、または名称指定が違います。');
@@ -1051,17 +1136,11 @@ export default function GameInterface() {
   const shareText = isAllClear
     ? '心の眼で全ての謎を解き明かしました'
     : '心の眼で謎を解き明かしました';
+  const clearPostUrl = 'https://twitter.com/intent/tweet?text=%E3%80%8CWEB%E8%AC%8E%E8%A7%A3%E3%81%8D%E3%82%B2%E3%83%BC%E3%83%A0%EF%BD%9E%E5%BF%83%E7%9C%BC%EF%BD%9E%E3%80%8D%E3%82%92%E3%82%AF%E3%83%AA%E3%82%A2%E3%81%97%E3%81%9F%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%0A%E5%8F%B3%E7%9B%AE%E3%81%8C%E7%96%BC%E3%81%84%E3%81%9F%E3%81%9C...%0A%0A%E3%83%97%E3%83%AC%E3%82%A4%E3%81%AF%E3%81%93%E3%81%A1%E3%82%89%0Ahttps%3A%2F%2Fmind-eye-riddle.vercel.app%2F%0Ahttps%3A%2F%2Fmind-eye-riddle.vercel.app%2Fshare%2Fclear%0A%23%E5%BF%83%E7%9C%BC%E8%AC%8E%0A&openExternalBrowser=1';
+  const allClearPostUrl = 'https://twitter.com/intent/tweet?text=%E3%80%8CWEB%E8%AC%8E%E8%A7%A3%E3%81%8D%E3%82%B2%E3%83%BC%E3%83%A0%EF%BD%9E%E5%BF%83%E7%9C%BC%EF%BD%9E%E3%80%8D%E3%82%92%E5%AE%8C%E5%85%A8%E3%81%AB%E3%82%AF%E3%83%AA%E3%82%A2%E3%81%97%E3%81%9F%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%0A%E4%BF%BA%E3%81%AE%E5%8F%B3%E7%9B%AE%E3%81%8C%E7%96%BC%E3%81%84%E3%81%9F%E3%81%9C...%0A%0A%E3%83%97%E3%83%AC%E3%82%A4%E3%81%AF%E3%81%93%E3%81%A1%E3%82%89%0Ahttps%3A%2F%2Fmind-eye-riddle.vercel.app%2F%0Ahttps%3A%2F%2Fmind-eye-riddle.vercel.app%2Fshare%2Fallclear%0A%23%E5%BF%83%E7%9C%BC%E8%AC%8E%0A&openExternalBrowser=1';
 
   const openXPost = () => {
-    const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    const origin = configuredSiteUrl || window.location.origin;
-    const sharePath = isAllClear ? '/share/allclear' : '/share/clear';
-    const shareUrl = new URL(sharePath, origin).toString();
-    const intentUrl = new URL('https://twitter.com/intent/tweet');
-
-    intentUrl.searchParams.set('text', shareText);
-    intentUrl.searchParams.set('url', shareUrl);
-    window.open(intentUrl.toString(), '_blank', 'noopener,noreferrer');
+    window.open(isAllClear ? allClearPostUrl : clearPostUrl, '_blank', 'noopener,noreferrer');
   };
 
   if (!hasRestoredProgress) {
@@ -1201,7 +1280,7 @@ export default function GameInterface() {
             </label>
             {bonusMessage && <p className="text-center text-sm font-bold text-amber-200">{bonusMessage}</p>}
             <button type="submit" className="rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 py-3 font-bold text-white shadow-lg transition-all hover:from-amber-500 hover:to-orange-500 active:scale-95">
-              再提出する
+              別解を再提出する
             </button>
           </form>
         </div>
@@ -1213,17 +1292,58 @@ export default function GameInterface() {
         <div className="mb-5 flex items-center justify-between">
           <div>
             <p className="text-xs font-black tracking-[0.3em] text-amber-300">EXTRA 2</p>
-            <h1 className="mt-1 text-2xl font-black">残りの再提出</h1>
+            <h1 className="mt-1 text-2xl font-black">残りの別解再提出</h1>
           </div>
           <button type="button" onClick={() => setShowBonus(false)} className="rounded-lg border border-slate-600 px-3 py-2 text-sm font-bold text-slate-200">
             クリア画面へ
           </button>
         </div>
 
+        <div className="mb-4 rounded-2xl border border-slate-700 bg-slate-900/80 p-3">
+          <p className="mb-2 text-xs font-bold text-slate-400">お題ごとの正解状況</p>
+          <div className="grid gap-2">
+            {BONUS_STEP_SUBMISSIONS.map((bonusTarget, targetIndex) => {
+              const step = GAME_STEPS[bonusTarget.stepIndex];
+              const isCorrect = targetIndex < bonusIndex;
+              const isCurrent = targetIndex === bonusIndex && !isBonusComplete;
+
+              return (
+                <div
+                  key={`${bonusTarget.stepIndex}-${bonusTarget.label}`}
+                  className={`rounded-xl border px-3 py-2 text-xs transition-colors ${
+                    isCorrect
+                      ? 'border-emerald-400/60 bg-emerald-950/50 text-emerald-100'
+                      : isCurrent
+                        ? 'border-amber-400/50 bg-amber-950/30 text-amber-100'
+                        : 'border-slate-700 bg-slate-950/60 text-slate-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold">{step?.title ?? `お題${targetIndex + 1}`}</span>
+                    <span className="shrink-0 font-black">
+                      {isCorrect ? '正解' : isCurrent ? '回答中' : '未回答'}
+                    </span>
+                  </div>
+                  <div className="mt-1">
+                    お題：<span className="font-bold">{step?.themeText ?? '-'}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {isBonusComplete || !target || !submission || !originalStep ? (
           <div className="my-auto rounded-2xl border border-amber-400/30 bg-amber-950/30 p-6 text-center">
             <p className="text-xl font-black text-amber-200">おまけコンプリート</p>
             <p className="mt-3 text-sm leading-relaxed text-slate-300">本編では使わなかった提出先も、すべて正しく再提出できました。</p>
+            <button
+              type="button"
+              onClick={() => setShowBonus(false)}
+              className="mt-6 rounded-xl border border-amber-300/50 bg-amber-500/15 px-6 py-3 text-sm font-black text-amber-100 transition-colors hover:bg-amber-500/25"
+            >
+              オールクリア画面へ
+            </button>
           </div>
         ) : (
           <form onSubmit={handleBonusSubmission} className="flex flex-col gap-4 rounded-2xl border border-amber-400/25 bg-slate-900/80 p-4 shadow-xl">
@@ -1264,6 +1384,7 @@ export default function GameInterface() {
               alt={isAllClear ? 'オールクリア' : 'ゲームクリア'}
               fill
               priority
+              sizes="(max-width: 448px) 100vw, 384px"
               className="object-contain drop-shadow-[0_0_30px_rgba(34,211,238,0.25)]"
             />
           </div>
@@ -1282,14 +1403,8 @@ export default function GameInterface() {
             <button
               type="button"
               onClick={() => {
-                setActiveTab('main');
-                setBonusMessage('');
-                setShowBonusChoice(false);
-                setShowBonus(true);
-                if (bonusStep === 1 && bonusIndex === 0) {
-                  startCutIn(CUT_IN_LINES.bonusStart, getBonusStepLogIndex(1));
-                }
-              }}
+              startBonus();
+            }}
               className="mt-5 rounded-xl border border-amber-300/40 bg-amber-500/15 px-6 py-3 font-black text-amber-100 transition-colors hover:bg-amber-500/25"
             >
               おまけの再提出に挑戦する
@@ -1375,6 +1490,7 @@ export default function GameInterface() {
                   src={activePuzzleImage}
                   alt="謎画像" 
                   fill 
+                  sizes="(max-width: 448px) 100vw, 448px"
                   className="object-contain"
                   priority
                 />
@@ -1751,7 +1867,7 @@ export default function GameInterface() {
             >
               <h3 className="text-center text-sm text-slate-400 mb-2">1F</h3>
               <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black">
-                <Image src="/images/map1f.png" alt="Map 1F" fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                <Image src="/images/map1f.png" alt="Map 1F" fill sizes="(max-width: 448px) calc(100vw - 48px), 400px" className="object-cover group-hover:scale-105 transition-transform duration-500" />
               </div>
               <div className="absolute bottom-4 right-4 bg-black/50 rounded-full p-1.5 backdrop-blur-sm pointer-events-none text-white/70 opacity-0 group-hover:opacity-100 transition-opacity">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1765,7 +1881,7 @@ export default function GameInterface() {
             >
               <h3 className="text-center text-sm text-slate-400 mb-2">2F</h3>
               <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black">
-                <Image src="/images/map2f.png" alt="Map 2F" fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                <Image src="/images/map2f.png" alt="Map 2F" fill sizes="(max-width: 448px) calc(100vw - 48px), 400px" className="object-cover group-hover:scale-105 transition-transform duration-500" />
               </div>
               <div className="absolute bottom-4 right-4 bg-black/50 rounded-full p-1.5 backdrop-blur-sm pointer-events-none text-white/70 opacity-0 group-hover:opacity-100 transition-opacity">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1924,6 +2040,8 @@ export default function GameInterface() {
                       src={`/images/${currentFilename}.png`} 
                       alt={`Location ${photo}`} 
                       fill 
+                      sizes="(max-width: 448px) calc((100vw - 44px) / 2), 190px"
+                      priority={photo === unlockedPhotos[0]}
                       className="object-cover group-hover:scale-110 transition-transform duration-700"
                     />
                     {isNew && (
@@ -1982,7 +2100,7 @@ export default function GameInterface() {
                       className="relative w-20 h-20 bg-black rounded-lg overflow-hidden shrink-0 cursor-pointer border border-slate-600 hover:opacity-80 transition-opacity"
                       onClick={() => setZoomedImage(step.puzzleImage)}
                     >
-                      <Image src={step.puzzleImage} alt={step.title} fill className="object-contain" />
+                      <Image src={step.puzzleImage} alt={step.title} fill sizes="80px" className="object-contain" />
                       <div className="absolute bottom-1 right-1 bg-black/60 rounded-full p-0.5 text-white/80">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
                       </div>
@@ -2083,6 +2201,82 @@ export default function GameInterface() {
                   </div>
                 );
               })}
+              {(showBonus || bonusStepOneAnswerLog || bonusIndex > 0) && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="font-bold text-amber-300">EXTRA1</h3>
+                    {(cutInLogByStep[getBonusStepLogIndex(1)] || []).length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCutInLogStep(getBonusStepLogIndex(1))}
+                        className="shrink-0 rounded-full border border-indigo-400/50 bg-indigo-900/50 px-2.5 py-1 text-[11px] font-bold text-indigo-100 transition-colors hover:bg-indigo-800"
+                      >
+                        会話ログ
+                      </button>
+                    )}
+                  </div>
+                  <div className="mt-3 space-y-2 rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs leading-relaxed">
+                    <div>
+                      <span className="block font-bold text-slate-500">お題</span>
+                      <span className="text-slate-200">「アルミ」を再提出</span>
+                    </div>
+                    {bonusStepOneAnswerLog ? (
+                      <div>
+                        <span className="block font-bold text-slate-500">回答した内容</span>
+                        <span className="text-slate-100">{bonusStepOneAnswerLog}</span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400">挑戦中</span>
+                    )}
+                  </div>
+                </div>
+              )}
+              {(showBonus || bonusIndex > 0) && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="font-bold text-amber-300">EXTRA2</h3>
+                    {(cutInLogByStep[getBonusStepLogIndex(2)] || []).length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCutInLogStep(getBonusStepLogIndex(2))}
+                        className="shrink-0 rounded-full border border-indigo-400/50 bg-indigo-900/50 px-2.5 py-1 text-[11px] font-bold text-indigo-100 transition-colors hover:bg-indigo-800"
+                      >
+                        会話ログ
+                      </button>
+                    )}
+                  </div>
+                  <div className="mt-3 space-y-3">
+                    {BONUS_STEP_SUBMISSIONS.slice(0, bonusIndex).map((target, index) => {
+                      const originalStep = GAME_STEPS[target.stepIndex];
+                      const submission = bonusSubmissions[index];
+
+                      return (
+                        <div key={`${target.stepIndex}-${target.label}`} className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-xs leading-relaxed">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-emerald-200">{originalStep?.title ?? `お題${index + 1}`}</span>
+                            <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 font-black text-emerald-200">正解</span>
+                          </div>
+                          <div className="mt-2">
+                            <span className="block font-bold text-slate-500">ログで見えないが提出したもの</span>
+                            <span className="text-slate-100">{target.logDisplayItem ?? target.originalSubmittedItem}</span>
+                          </div>
+                          <div className="mt-2">
+                            <span className="block font-bold text-slate-500">回答した内容</span>
+                            <span className="text-slate-100">
+                              場所：{submission.location} / 基準アイテム：{submission.item} / 位置：{submission.position} / 名称指定：{submission.specifiedName}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {bonusIndex === 0 && (
+                      <span className="block rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs text-slate-400">
+                        まだ正解した再提出はありません。
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -2335,6 +2529,7 @@ export default function GameInterface() {
                 src={zoomedImage} 
                 alt="拡大画像" 
                 fill 
+                sizes="100vw"
                 className="object-contain"
                 priority
               />
