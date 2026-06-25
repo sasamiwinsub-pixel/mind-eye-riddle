@@ -47,6 +47,7 @@ export interface StepData {
       choices?: string[];    // 指定時は自由入力ではなく選択式にする
       unlockLocation: string; // 解放される場所(A〜L)
       unlockItem: string;     // 解放されるアイテム名
+      replaceItem?: string;   // 既存の選択肢を置き換える場合の置換元アイテム名
       successMessage?: string; // 正解時の相棒セリフ
     };
   }[];
@@ -245,7 +246,7 @@ export const GAME_STEPS: StepData[] = [
     incorrectSearchMessages: [
       {
         location: 'I',
-        item: '右の缶',
+        item: 'アルミ缶(右)',
         message: '提出したいもの自体を基準アイテムにはできません',
       },
     ],
@@ -266,6 +267,7 @@ export const GAME_STEPS: StepData[] = [
           choices: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K'],
           unlockLocation: 'I',
           unlockItem: 'アルミ缶(右)',
+          replaceItem: '右の缶',
           successMessage: 'どちらも形状も大きさも同じだが、見分けるのが得意でね...右がアルミ缶だ！！'
         },
        }
@@ -299,7 +301,8 @@ export const GAME_STEPS: StepData[] = [
     unlockedPhotos: ['L', 'お'],
     updatedPhotosAtPuzzle: { },
     unlockedLocationItems: {
-      K: ['暖簾', '募金箱']
+      K: ['募金箱'],
+      L: ['暖簾']
     },
     partnerEvents: [
       { targetPhoto: 'お',  message: 'おかしいな...Fの謎の球体を提出した場所に花のフィギュアが出現してる...'        
@@ -393,7 +396,7 @@ export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
     label: '4',
     originalSubmittedItem: 'ハンガー',
     retryItem: '10円玉',
-    acceptedRetryItems: ['10','１０','10円玉', '10えんだま', 'じゅうえんだま', 'ジュウエンダマ', '10円', '10えん', 'じゅうえん', 'ジュウエン', '銅貨', 'どうか'],
+    acceptedRetryItems: ['10','１０','10円玉', '10えんだま', 'じゅうえんだま', 'ジュウエンダマ', '10円', '10えん', 'じゅうえん', 'ジュウエン', '銅貨', 'どうか', '十', '十円', '十えん', '十円玉', '十えんだま'],
     acceptedTargets: [{ location: 'K', item: '募金箱', position: '中' }],
   },
   {

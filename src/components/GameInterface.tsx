@@ -695,6 +695,9 @@ export default function GameInterface() {
           const qKey = getPartnerEventKey(step.id, eventIndex);
           if (solvedPartnerQuestions.includes(qKey) && event.questionAnswer) {
             if (event.questionAnswer.unlockLocation === loc) {
+              if (event.questionAnswer.replaceItem) {
+                items.delete(event.questionAnswer.replaceItem);
+              }
               items.add(event.questionAnswer.unlockItem);
             }
           }
@@ -2618,7 +2621,7 @@ export default function GameInterface() {
             <div className="space-y-5 text-sm leading-relaxed">
               <section>
                 <h3 className="mb-2 font-bold text-emerald-300">クリア条件</h3>
-                <p>マップ上の「あ」〜「け」の全てにお題のアイテムを提出する</p>
+                <p>マップ上の「あ」〜「く」の全てにお題のアイテムを提出する</p>
                 <p className="mt-2 text-slate-300">※謎のイラストで登場したアイテムしか視認できない</p>
               </section>
 
