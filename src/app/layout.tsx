@@ -5,8 +5,8 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Web謎解きゲーム プロトタイプ',
-  description: 'スマートフォン操作に最適化された謎解きゲームのプロトタイプです。',
+  title: 'WEB謎解きゲーム～心眼～',
+  description: 'スマートフォン向けWEB謎解きゲーム',
 };
 
 export default function RootLayout({

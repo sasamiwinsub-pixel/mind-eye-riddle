@@ -44,6 +44,9 @@ type SavedGameProgress = {
   bonusSubmissions?: FinalSubmission[];
   bonusMessage?: string;
   showBonusChoice?: boolean;
+  showEpilogue?: boolean;
+  epilogueLineIndex?: number;
+  isEpilogueAutoScroll?: boolean;
   isGameCleared: boolean;
   finalSubmissions: FinalSubmission[];
   showCorrectOverlay: boolean;
@@ -261,6 +264,17 @@ const isSavedGameProgress = (value: unknown): value is SavedGameProgress => {
     )
     && (value.bonusMessage === undefined || typeof value.bonusMessage === 'string')
     && (value.showBonusChoice === undefined || typeof value.showBonusChoice === 'boolean')
+    && (value.showEpilogue === undefined || typeof value.showEpilogue === 'boolean')
+    && (
+      value.epilogueLineIndex === undefined
+      || (
+        typeof value.epilogueLineIndex === 'number'
+        && Number.isInteger(value.epilogueLineIndex)
+        && value.epilogueLineIndex >= 0
+        && value.epilogueLineIndex < EPILOGUE_LINES.length
+      )
+    )
+    && (value.isEpilogueAutoScroll === undefined || typeof value.isEpilogueAutoScroll === 'boolean')
     && typeof value.isGameCleared === 'boolean'
     && Array.isArray(value.finalSubmissions)
     && (
@@ -316,6 +330,14 @@ const createInitialSubmissions = (targets: LastStepSubmissionData[]): FinalSubmi
   })
 );
 
+const EPILOGUE_LINES = [
+  { speaker: 'ai', text: '「無事成功できてよかったね！」' },
+  { speaker: 'system', text: '相棒の嬉しそうな様子を見て、肩の荷が下りた気がした。' },
+  { speaker: 'ai', text: '「ゲームマスターも疑われている様子無かったし、見えないものバンバン答えて流石だね」' },
+  { speaker: 'system', text: 'これまでインクで隠された謎や半分しかない謎を幾度となく答えてきたが、今回の経験でさらなる力の覚醒を感じる。俺は自信を持って答える。' },
+  { speaker: 'main', text: '「俺の右目に見通せないものはない」' },
+];
+
 
 export default function GameInterface() {
   const [currentStepId, setCurrentStepId] = useState(0);
@@ -344,6 +366,9 @@ export default function GameInterface() {
   const [bonusSubmissions, setBonusSubmissions] = useState<FinalSubmission[]>(() => createInitialSubmissions(BONUS_STEP_SUBMISSIONS));
   const [bonusMessage, setBonusMessage] = useState('');
   const [showBonusChoice, setShowBonusChoice] = useState(false);
+  const [showEpilogue, setShowEpilogue] = useState(false);
+  const [epilogueLineIndex, setEpilogueLineIndex] = useState(0);
+  const [isEpilogueAutoScroll, setIsEpilogueAutoScroll] = useState(true);
 
   const [errorMsg, setErrorMsg] = useState('');
   const [showCorrectOverlay, setShowCorrectOverlay] = useState(false);
@@ -443,6 +468,9 @@ export default function GameInterface() {
         setBonusSubmissions(savedGame.bonusSubmissions ?? createInitialSubmissions(BONUS_STEP_SUBMISSIONS));
         setBonusMessage(savedGame.bonusMessage ?? '');
         setShowBonusChoice(savedGame.showBonusChoice ?? false);
+        setShowEpilogue(savedGame.showEpilogue ?? false);
+        setEpilogueLineIndex(savedGame.epilogueLineIndex ?? 0);
+        setIsEpilogueAutoScroll(savedGame.isEpilogueAutoScroll ?? true);
         setIsGameCleared(savedGame.isGameCleared);
         setFinalSubmissions(
           savedGame.finalSubmissions.length === FINAL_STEP_SUBMISSIONS.length
@@ -511,6 +539,9 @@ export default function GameInterface() {
       bonusSubmissions,
       bonusMessage,
       showBonusChoice,
+      showEpilogue,
+      epilogueLineIndex,
+      isEpilogueAutoScroll,
       isGameCleared,
       finalSubmissions,
       showCorrectOverlay,
@@ -552,6 +583,7 @@ export default function GameInterface() {
     cutInLines,
     cutInLogByStep,
     currentStepId,
+    epilogueLineIndex,
     finalSubmissions,
     finalSphereAnswer,
     hasRestoredProgress,
@@ -559,6 +591,7 @@ export default function GameInterface() {
     hasStartedTabGuide,
     hotSpringAnswer,
     isAdditionalRuleUnlocked,
+    isEpilogueAutoScroll,
     isFollowUpPuzzle,
     isGameCleared,
     isImageCollapsed,
@@ -583,6 +616,7 @@ export default function GameInterface() {
     showCorrectOverlay,
     showBonus,
     showBonusChoice,
+    showEpilogue,
     showRulesInfoPrompt,
     solvedPartnerQuestions,
     stepOSearchHintStartedAt,
@@ -626,6 +660,17 @@ export default function GameInterface() {
     phase,
     stepOSearchHintStartedAt,
   ]);
+
+  useEffect(() => {
+    if (!hasRestoredProgress || !showEpilogue || !isEpilogueAutoScroll) return;
+    if (epilogueLineIndex >= EPILOGUE_LINES.length - 1) return;
+
+    const timerId = window.setTimeout(() => {
+      setEpilogueLineIndex(index => Math.min(index + 1, EPILOGUE_LINES.length - 1));
+    }, 3500);
+
+    return () => window.clearTimeout(timerId);
+  }, [epilogueLineIndex, hasRestoredProgress, isEpilogueAutoScroll, showEpilogue]);
 
   const getPartnerEventKey = (stepId: number, eventIndex: number) => `${stepId}_${eventIndex}`;
 
@@ -1143,6 +1188,32 @@ export default function GameInterface() {
     window.open(isAllClear ? allClearPostUrl : clearPostUrl, '_blank', 'noopener,noreferrer');
   };
 
+  const startEpilogue = () => {
+    setShowBonus(false);
+    setShowEpilogue(true);
+    setEpilogueLineIndex(0);
+    setIsEpilogueAutoScroll(true);
+  };
+
+  const advanceEpilogue = () => {
+    if (epilogueLineIndex < EPILOGUE_LINES.length - 1) {
+      setEpilogueLineIndex(index => Math.min(index + 1, EPILOGUE_LINES.length - 1));
+      setIsEpilogueAutoScroll(false);
+    }
+  };
+
+  const getEpilogueLineClass = (speaker: string) => {
+    switch (speaker) {
+      case 'main':
+        return 'font-black text-amber-200 text-lg';
+      case 'ai':
+        return 'font-bold text-emerald-300';
+      case 'system':
+      default:
+        return 'leading-relaxed text-slate-200';
+    }
+  };
+
   if (!hasRestoredProgress) {
     return <div className="mx-auto h-[100dvh] max-w-md bg-slate-950" />;
   }
@@ -1339,10 +1410,10 @@ export default function GameInterface() {
             <p className="mt-3 text-sm leading-relaxed text-slate-300">本編では使わなかった提出先も、すべて正しく再提出できました。</p>
             <button
               type="button"
-              onClick={() => setShowBonus(false)}
+              onClick={startEpilogue}
               className="mt-6 rounded-xl border border-amber-300/50 bg-amber-500/15 px-6 py-3 text-sm font-black text-amber-100 transition-colors hover:bg-amber-500/25"
             >
-              オールクリア画面へ
+              エピローグへ
             </button>
           </div>
         ) : (
@@ -1364,6 +1435,73 @@ export default function GameInterface() {
             {bonusMessage && <p className="text-center text-sm font-bold text-amber-200">{bonusMessage}</p>}
             <button type="submit" className="rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 py-3 font-bold text-white">この内容で提出する</button>
           </form>
+        )}
+      </div>
+    );
+  }
+
+  if (showEpilogue) {
+    const isEpilogueComplete = epilogueLineIndex >= EPILOGUE_LINES.length - 1;
+
+    return (
+      <div className="relative mx-auto flex h-[100dvh] max-w-md flex-col overflow-hidden bg-slate-950 text-slate-100">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-24 top-16 h-64 w-64 rounded-full bg-amber-500/10 blur-3xl" />
+          <div className="absolute -right-20 bottom-20 h-72 w-72 rounded-full bg-cyan-500/15 blur-3xl" />
+          <div className="absolute inset-x-0 top-1/3 h-px bg-gradient-to-r from-transparent via-amber-300/30 to-transparent" />
+        </div>
+
+        <header className="glass-panel relative z-10 px-4 py-3">
+          <p className="text-xs font-black tracking-[0.35em] text-amber-300">EPILOGUE</p>
+          <h1 className="mt-1 text-xl font-black text-white">心眼の覚醒</h1>
+        </header>
+
+        <main
+          className="relative z-10 flex flex-1 cursor-pointer flex-col overflow-y-auto p-5 no-scrollbar"
+          onClick={advanceEpilogue}
+        >
+          <div className="space-y-4">
+            {EPILOGUE_LINES.slice(0, epilogueLineIndex + 1).map((line, index) => (
+              <div
+                key={`${line.speaker}-${index}`}
+                className={`animate-in fade-in slide-in-from-bottom-2 rounded-xl border border-slate-700/60 bg-slate-900/65 px-4 py-3 shadow-lg duration-300 ${getEpilogueLineClass(line.speaker)}`}
+              >
+                {line.text}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex-1" />
+
+          <div className="mt-6 text-center">
+            <div className="mb-2 text-xs text-slate-500">
+              {epilogueLineIndex + 1} / {EPILOGUE_LINES.length}
+            </div>
+            <div className="h-2 w-full rounded-full bg-slate-800">
+              <div
+                className="h-2 rounded-full bg-gradient-to-r from-amber-400 to-cyan-400 transition-all duration-300"
+                style={{ width: `${((epilogueLineIndex + 1) / EPILOGUE_LINES.length) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {!isEpilogueComplete && (
+            <div className="mt-4 text-center text-xs text-slate-500 animate-pulse">
+              クリックして進める
+            </div>
+          )}
+        </main>
+
+        {isEpilogueComplete && (
+          <div className="relative z-10 p-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <button
+              type="button"
+              onClick={() => setShowEpilogue(false)}
+              className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-cyan-500 py-4 text-lg font-black tracking-wider text-white shadow-[0_0_28px_rgba(34,211,238,0.25)] transition-all hover:from-amber-400 hover:to-cyan-400 active:scale-95"
+            >
+              オールクリア画面へ
+            </button>
+          </div>
         )}
       </div>
     );
@@ -1410,6 +1548,21 @@ export default function GameInterface() {
               おまけの再提出に挑戦する
             </button>
           )}
+          <section className="mt-10 w-full rounded-2xl border border-slate-700/70 bg-slate-900/55 px-5 py-4 text-center text-sm text-slate-300">
+            <div>
+              <p className="text-xs font-black tracking-[0.25em] text-slate-500">制作</p>
+              <p className="mt-2 font-bold text-slate-100">ささみカツ</p>
+            </div>
+            <div className="mt-5">
+              <p className="text-xs font-black tracking-[0.25em] text-slate-500">スペシャルサンクス</p>
+              <div className="mt-2 space-y-1 font-bold text-slate-100">
+                <p>まいたけ@三度の飯と謎が好き</p>
+                <p>カク</p>
+                <p>Lexer</p>
+                <p>GENOCIDE</p>
+              </div>
+            </div>
+          </section>
         </main>
       </div>
     );

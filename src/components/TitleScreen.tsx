@@ -29,15 +29,8 @@ export default function TitleScreen({ onStart }: TitleScreenProps) {
           </h2>
           <ul className="list-disc space-y-3 pl-5 text-sm leading-relaxed text-slate-200">
             <li>インターネット検索の必要はありませんが、していただいても構いません</li>
+            <li>ヒントはほぼ答えまで掲載されているので、順番に見ることを推奨します</li>
           </ul>
-
-          <div className="mt-5 rounded-xl border border-dashed border-slate-600 bg-slate-950/50 px-4 py-3">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-bold text-slate-300">ヒントサイト</span>
-              <span className="rounded-full bg-slate-700 px-2 py-1 text-[10px] font-bold text-slate-300">準備中</span>
-            </div>
-            <p className="mt-1 text-xs text-slate-500">リンクは現在準備中です</p>
-          </div>
         </section>
       </main>
 
