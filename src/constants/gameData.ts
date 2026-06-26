@@ -5,6 +5,8 @@ export interface StepData {
   title: string;
   puzzleImage: string;
   themeText: string;
+  themeSupplement?: string;
+  bonusThemeSupplement?: string;
   puzzleAnswer: string; // 前半のテキスト入力正解
   acceptedPuzzleAnswers?: string[];
   followUpPuzzle?: {
@@ -203,7 +205,9 @@ export const GAME_STEPS: StepData[] = [
     id: 4,
     title: '提出場所：「か」',
     puzzleImage: '/images/step4.png',
-    themeText: 'かけるのに使うもの',
+    themeText: `”かける”ためには必要なもの`,
+    themeSupplement: '掛け軸は”掛けられる”対象であり、フックが”かける”ためには必要なものです。',
+    bonusThemeSupplement: `掛け軸や暖簾は”掛けられる”対象であり、フックや棒が”かける”ためには必要なものです。※（フック・棒・”かける”ものが液体の場合は回答不要です）`,
     puzzleAnswer: 'だい',
     acceptedPuzzleAnswers: ['台', '大', 'ダイ'],
     showBlueAnswerEffect: true,
@@ -354,7 +358,7 @@ export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
     label: '1',
     originalSubmittedItem: '電池',
     retryItem: 'コーラ',
-    acceptedRetryItems: ['コカ・コーラ', 'こか・こーら', 'コカコーラ', 'こかこーら', 'こーら', '缶', 'かん'],
+    acceptedRetryItems: ['コカ・コーラ', 'こか・こーら', 'コカコーラ', 'こかこーら', 'こーら', '缶', 'かん', '炭酸飲料', 'たんさんいんりょう', '炭酸', 'たんさん'],
     acceptedTargets: [{ location: 'I', item: '酒瓶', position: '左' }],
   },
   {
@@ -362,7 +366,7 @@ export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
     label: '1-5',
     originalSubmittedItem: 'ライオンの銅像',
     retryItem: '机',
-    acceptedRetryItems: ['つくえ', 'デスク', 'テーブル', 'ローテーブル'],
+    acceptedRetryItems: ['つくえ', 'ツクエ', 'デスク', 'ですく', '卓球台', 'たっきゅうだい', 'タッキュウダイ', '蜘蛛', 'くも', 'クモ'],
     acceptedTargets: [
       { location: 'A', item: '盆', position: '下' },
       { location: 'A', item: '湯呑', position: '下' },
