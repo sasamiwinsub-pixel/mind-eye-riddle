@@ -17,7 +17,7 @@ type FinalSubmission = {
   item: string;
   specifiedName: string;
 };
-type BonusMultiAnswer = 'table_tennis_table' | 'desk' | 'spider' | 'ten_yen' | 'key';
+type BonusMultiAnswer = 'table_tennis_table' | 'desk' | 'spider';
 type PendingCutIn = {
   lines: CutInLine[];
   stepIndex: number;
@@ -152,9 +152,9 @@ const CUT_IN_LINES = {
   ],
   bonusStepTwoStart: [
      { speaker: '相棒', text: 'まさか募金箱のお金を移動させるなんて...。立山君はこういう時に頼もしいけど、友人の横山としては倫理観が心配だね' },
-     { speaker: 'ゲームマスター', text: 'ご安心ください。元々空の募金箱に2枚の硬貨、11円を事前に募金をしておきました。窃盗には当たらないのでご安心を' },
+     { speaker: 'ゲームマスター', text: 'ご安心ください。元々空の募金箱に1円を事前に募金をしておきました。窃盗には当たらないのでご安心を' },
      { speaker: 'ゲームマスター', text: 'それでは、残りの別解が存在するもの全て、4つのお題を回答してください。' },
-     { speaker: 'ゲームマスター', text: 'ただし、今回は転送するものではないので、”言い当てること”ができたら正解です。テキスト入力のみで回答を受け付けます' },
+     { speaker: 'ゲームマスター', text: 'ただし、今回は転送はせず、”言い当てること”ができたら正解です。テキスト入力のみで回答を受け付けます' },
   ]
 } satisfies Record<string, CutInLine[]>;
 
@@ -189,8 +189,6 @@ const bonusMultiAnswerLabels: Record<BonusMultiAnswer, string> = {
   table_tennis_table: '卓球台',
   desk: '机（デスク）',
   spider: '蜘蛛',
-  ten_yen: '10円玉',
-  key: '鍵',
 };
 
 const bonusMultiAnswerGroups: Partial<Record<number, { answer: BonusMultiAnswer; acceptedAnswers: string[] }[]>> = {
@@ -198,10 +196,6 @@ const bonusMultiAnswerGroups: Partial<Record<number, { answer: BonusMultiAnswer;
     { answer: 'table_tennis_table', acceptedAnswers: ['卓球台', 'たっきゅうだい', 'タッキュウダイ'] },
     { answer: 'desk', acceptedAnswers: ['机', 'つくえ', 'ツクエ', 'デスク', 'ですく', 'テーブル', 'てーぶる', 'ちゃぶ台', 'ちゃぶだい', '卓袱台'] },
     { answer: 'spider', acceptedAnswers: ['蜘蛛', 'くも', 'クモ'] },
-  ],
-  5: [
-    { answer: 'ten_yen', acceptedAnswers: ['10', '１０', '10円玉', '10えんだま', 'じゅうえんだま', 'ジュウエンダマ', '10円', '10えん', 'じゅうえん', 'ジュウエン', '十', '十円', '十えん', '十円玉', '十えんだま'] },
-    { answer: 'key', acceptedAnswers: ['鍵', 'かぎ', 'カギ', 'キー', 'きー', 'key'] },
   ],
 };
 
@@ -240,8 +234,6 @@ const isBonusMultiAnswer = (value: unknown): value is BonusMultiAnswer => (
   value === 'table_tennis_table'
   || value === 'desk'
   || value === 'spider'
-  || value === 'ten_yen'
-  || value === 'key'
 );
 
 const isSavedGameProgress = (value: unknown): value is SavedGameProgress => {
@@ -1203,7 +1195,7 @@ export default function GameInterface() {
       }
 
       setBonusIndex(index => index + 1);
-      setBonusMessage(`${requiredAnswerCount}種類すべて正解です。次の提出へ進みます。`);
+      setBonusMessage('');
       return;
     }
 
@@ -1224,7 +1216,7 @@ export default function GameInterface() {
     }
 
     setBonusIndex(index => index + 1);
-    setBonusMessage('正解です。次の提出へ進みます。');
+    setBonusMessage('');
   };
 
   const activeCutInLine = cutInLines[cutInIndex] || null;
@@ -1373,6 +1365,7 @@ export default function GameInterface() {
               <p className="mt-1 text-xs leading-relaxed text-slate-300">
                 場所・アイテム・位置を選択し、転送対象の名称も指定してください。
                 ※先ほどと同じアルミ缶は提出できません
+                ※本編で提出済みのアイテムも写真の状態へリセットされています
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -1436,7 +1429,7 @@ export default function GameInterface() {
             </label>
             {bonusMessage && <p className="text-center text-sm font-bold text-amber-200">{bonusMessage}</p>}
             <button type="submit" className="rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 py-3 font-bold text-white shadow-lg transition-all hover:from-amber-500 hover:to-orange-500 active:scale-95">
-              別解を再提出する
+              別解を回答する
             </button>
           </form>
         </div>
@@ -1448,7 +1441,7 @@ export default function GameInterface() {
         <div className="mb-5 flex items-center justify-between">
           <div>
             <p className="text-xs font-black tracking-[0.3em] text-amber-300">EXTRA 2</p>
-            <h1 className="mt-1 text-2xl font-black">残りの別解再提出</h1>
+            <h1 className="mt-1 text-2xl font-black">残りの別解（提出は不要）</h1>
           </div>
           <button type="button" onClick={() => setShowBonus(false)} className="rounded-lg border border-slate-600 px-3 py-2 text-sm font-bold text-slate-200">
             クリア画面へ
@@ -1456,7 +1449,7 @@ export default function GameInterface() {
         </div>
 
         <div className="mb-4 rounded-2xl border border-slate-700 bg-slate-900/80 p-3">
-          <p className="mb-2 text-xs font-bold text-slate-400">お題ごとの正解状況</p>
+          <p className="mb-2 text-xs font-bold text-slate-400">お題ごとの正解状況）</p>
           <div className="grid gap-2">
             {BONUS_STEP_SUBMISSIONS.map((bonusTarget, targetIndex) => {
               const step = GAME_STEPS[bonusTarget.stepIndex];
@@ -1513,6 +1506,23 @@ export default function GameInterface() {
               <h2 className="text-lg font-black">{originalStep.title}</h2>
               <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-bold text-amber-300">{bonusIndex + 1} / {BONUS_STEP_SUBMISSIONS.length}</span>
             </div>
+            <div className="rounded-2xl border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner">
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-black tracking-[0.2em] text-slate-500">REFERENCE</p>
+                  <p className="mt-1 text-sm font-bold text-slate-300">場所・位置・基準アイテムの参考</p>
+                </div>
+                <span className="rounded-full border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] font-bold text-slate-500">判定対象外</span>
+              </div>
+              <p className="mb-3 text-xs leading-relaxed text-slate-500">
+                選択肢は参考情報として存在しており、EXTRA2の正解判定には使われません
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <label><span className="mb-1 block text-[11px] font-bold text-slate-500">場所</span><select value={submission.location} disabled={isSameAsOriginal} onChange={e => updateBonusSubmission('location', e.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-300 focus:border-slate-500 focus:outline-none"><option value="">選択</option>{LOCATIONS.map(value => <option key={value}>{value}</option>)}</select></label>
+                <label><span className="mb-1 block text-[11px] font-bold text-slate-500">位置</span><select value={submission.position} disabled={isSameAsOriginal} onChange={e => updateBonusSubmission('position', e.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-300 focus:border-slate-500 focus:outline-none">{POSITIONS.map(value => <option key={value}>{value}</option>)}</select></label>
+              </div>
+              <label className="mt-3 block"><span className="mb-1 block text-[11px] font-bold text-slate-500">基準となるアイテム</span><select value={submission.item} disabled={isSameAsOriginal} onChange={e => updateBonusSubmission('item', e.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-300 focus:border-slate-500 focus:outline-none"><option value="">選択してください</option>{availableItems.map(value => <option key={value}>{value}</option>)}</select></label>
+            </div>
             <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3 text-xs leading-relaxed text-slate-300">
               <div>お題：<span className="font-bold text-white">{originalStep.themeText}</span></div>
               {(originalStep.bonusThemeSupplement ?? originalStep.themeSupplement) && (
@@ -1521,7 +1531,7 @@ export default function GameInterface() {
                 </div>
               )}
               <div className="mt-1">ログで見えないが提出したもの：<span className="font-bold text-white">{target.logDisplayItem ?? target.originalSubmittedItem}</span></div>
-              <div className="mt-2 text-amber-200">場所・位置・基準アイテムは考えるための参考欄です。正解判定は下の回答テキストのみで行います。</div>
+              <div className="mt-2 text-amber-200">回答は下のテキスト入力のみで判定されます。</div>
               {multiAnswerGroups && (
                 <div className="mt-3 rounded-lg border border-emerald-400/30 bg-emerald-950/25 px-3 py-2">
                   <div className="flex items-center justify-between gap-2 text-emerald-100">
@@ -1548,15 +1558,11 @@ export default function GameInterface() {
                 </div>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <label><span className="mb-1 block text-xs text-slate-400">参考：場所</span><select value={submission.location} disabled={isSameAsOriginal} onChange={e => updateBonusSubmission('location', e.target.value)} className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3"><option value="">選択</option>{LOCATIONS.map(value => <option key={value}>{value}</option>)}</select></label>
-              <label><span className="mb-1 block text-xs text-slate-400">参考：位置</span><select value={submission.position} disabled={isSameAsOriginal} onChange={e => updateBonusSubmission('position', e.target.value)} className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3">{POSITIONS.map(value => <option key={value}>{value}</option>)}</select></label>
-            </div>
-            <label><span className="mb-1 block text-xs text-slate-400">参考：基準となるアイテム</span><select value={submission.item} disabled={isSameAsOriginal} onChange={e => updateBonusSubmission('item', e.target.value)} className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3"><option value="">選択してください</option>{availableItems.map(value => <option key={value}>{value}</option>)}</select></label>
+            
             <label><span className="mb-1 block text-xs font-bold text-amber-300">回答（必須）</span><input required value={submission.specifiedName} onChange={e => updateBonusSubmission('specifiedName', e.target.value)} className="w-full rounded-lg border border-amber-500/40 bg-slate-800 p-3" placeholder={multiAnswerGroups ? `${requiredMultiAnswerCount}種類の答えを1つずつ入力` : '答えを入力'} /></label>
             {bonusMessage && <p className="text-center text-sm font-bold text-amber-200">{bonusMessage}</p>}
             <button type="submit" className="rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 py-3 font-bold text-white">
-              {multiAnswerGroups && currentMultiAnswerCount < requiredMultiAnswerCount - 1 ? '回答を追加する' : 'この内容で提出する'}
+              {multiAnswerGroups && currentMultiAnswerCount < requiredMultiAnswerCount - 1 ? '回答を追加する' : '回答する'}
             </button>
           </form>
         )}

@@ -1,4 +1,4 @@
-export const GAME_VERSION = '1.3.6';
+export const GAME_VERSION = '1.3.8';
 
 const STORAGE_KEY = 'mind-eye-riddle:progress';
 
