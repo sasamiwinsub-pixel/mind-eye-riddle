@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { BONUS_STEP_START_PHOTO_UPDATE, BONUS_STEP_SUBMISSIONS, BONUS_STEP_TWO_START_PHOTO_UPDATE, FINAL_STEP_SUBMISSIONS, GAME_STEPS, LAST_STEP_START_PHOTO_UPDATE, LAST_STEP_SUBMISSIONS, LOCATIONS, POSITIONS, type LastStepSubmissionData, type PhotoUpdateData } from '@/constants/gameData';
+import { BONUS_STEP_START_PHOTO_UPDATE, BONUS_STEP_SUBMISSIONS, BONUS_STEP_TWO_START_PHOTO_UPDATE, FINAL_STEP_SUBMISSIONS, GAME_STEPS, LAST_STEP_START_PHOTO_UPDATE, LAST_STEP_SUBMISSIONS, LOCATIONS, POSITIONS, type LastStepSubmissionData, type PhotoUpdateData, type StepData } from '@/constants/gameData';
 import { loadSavedSession, saveGameProgress } from '@/lib/gameProgressStorage';
 
 type Tab = 'main' | 'map' | 'photos' | 'log';
@@ -69,6 +69,7 @@ type SavedGameProgress = {
   photoFiles: Record<string, string>;
   newPhotos: string[];
   photoTabHasUnreadUpdate?: boolean;
+  mapTabHasUnreadMemo?: boolean;
   cutInLines: CutInLine[];
   cutInIndex: number;
   pendingCutIn: PendingCutIn | null;
@@ -85,7 +86,7 @@ const CUT_IN_LINES = {
     { speaker: 'ゲームマスター', text: 'ただいまよりゲームのチュートリアルを開始します。まずはこの謎を解いてください' },
   ],
   tutorialPuzzleSolved: [
-    { speaker: '相棒', text: '僕が幽体離脱で見に行くと、自動でそっちに写真が送られるみたいだ。逐一送るようにするよ' },
+    { speaker: '相棒', text: '僕の体は動かないけど、幽体離脱で動き回って写真は送れるみたいだ。逐一送るようにするよ' },
   ],
   stepOnePuzzleStart: [
     { speaker: '相棒', text: 'まずは謎からだね' },
@@ -118,7 +119,7 @@ const CUT_IN_LINES = {
     { speaker: '相棒', text: 'あと一つ提出するだけだ！' },
     { speaker: 'ゲームマスター', text: '残念ですが、提出場所「お」は数秒間正解判定となったもののすぐに不正解判定へ変わっております。全ての提出場所が安定して正解判定となることが成功条件です' },
     { speaker: '相棒', text: '何だって！？謎の球体が変化したの...か？ひとまず「お」の場所を再確認しよう' },
-    { speaker: 'ゲームマスター', text: '「お」も後で再提出してもらうため、残り二つです。最後のお題「蜘蛛」の提出場所は「あ」～「き」のいずれか好きな場所で構いません' },
+    { speaker: 'ゲームマスター', text: '「お」も後で再提出してもらうため、残り二つです。最後のお題「蜘蛛」の提出場所は「あ」～「き」の内、温泉の場所へ提出してもらいます' },
     { speaker: 'ゲームマスター', text: 'しかし、Fの8個ある球体の中の一つにしか蜘蛛は存在せず、現状一度の提出で正解することは不可能です'},
     { speaker: '相棒', text: 'ならどうすればいいんだ？' },
     { speaker: 'ゲームマスター', text: 'そこで、「外」の選択肢を解放してあげましょう。ただし、提出後に謎の球体が何かを最後に当ててもらいます' },
@@ -330,6 +331,7 @@ const isSavedGameProgress = (value: unknown): value is SavedGameProgress => {
     && validPhotoFiles
     && isStringArray(value.newPhotos)
     && (value.photoTabHasUnreadUpdate === undefined || typeof value.photoTabHasUnreadUpdate === 'boolean')
+    && (value.mapTabHasUnreadMemo === undefined || typeof value.mapTabHasUnreadMemo === 'boolean')
     && isCutInLines(value.cutInLines)
     && typeof value.cutInIndex === 'number'
     && Number.isInteger(value.cutInIndex)
@@ -440,6 +442,7 @@ export default function GameInterface() {
   const [photoTabHasUnreadUpdate, setPhotoTabHasUnreadUpdate] = useState(
     GAME_STEPS[0].unlockedPhotos.length > 0,
   );
+  const [mapTabHasUnreadMemo, setMapTabHasUnreadMemo] = useState(false);
 
   const [cutInLines, setCutInLines] = useState<CutInLine[]>(CUT_IN_LINES.tutorialStart);
   const [cutInIndex, setCutInIndex] = useState(0);
@@ -531,6 +534,7 @@ export default function GameInterface() {
           savedGame.photoTabHasUnreadUpdate
             ?? (savedGame.newPhotos.length > 0 && savedGame.activeTab !== 'photos'),
         );
+        setMapTabHasUnreadMemo(savedGame.mapTabHasUnreadMemo ?? false);
         setCutInLines(savedGame.cutInLines);
         setCutInIndex(savedGame.cutInIndex);
         setPendingCutIn(savedGame.pendingCutIn);
@@ -594,6 +598,7 @@ export default function GameInterface() {
       photoFiles,
       newPhotos,
       photoTabHasUnreadUpdate,
+      mapTabHasUnreadMemo,
       cutInLines,
       cutInIndex,
       pendingCutIn,
@@ -637,6 +642,7 @@ export default function GameInterface() {
     lastStepOneAnswerLog,
     lastStepOneName,
     lastStepTwoAnswerLog,
+    mapTabHasUnreadMemo,
     newPhotos,
     pendingCutIn,
     phase,
@@ -759,6 +765,12 @@ export default function GameInterface() {
   const setPhotoUpdateMarkers = (photos: string[]) => {
     setNewPhotos(photos);
     setPhotoTabHasUnreadUpdate(photos.length > 0);
+  };
+
+  const markMemoUpdateIfNeeded = (step: StepData) => {
+    if ((step.memos || []).length > 0 && activeTab !== 'map') {
+      setMapTabHasUnreadMemo(true);
+    }
   };
 
   const startCutIn = (lines: CutInLine[], stepIndex = currentStepIndex, addToLog = true) => {
@@ -898,6 +910,7 @@ export default function GameInterface() {
     });
 
     setPhotoUpdateMarkers([...newlyUnlocked, ...newlyUnlockedAtTheme, ...newlyUpdated]);
+    markMemoUpdateIfNeeded(currentStep);
 
     if (currentStepIndex === GAME_STEPS.length - 1) {
       startLastStep();
@@ -1003,6 +1016,7 @@ export default function GameInterface() {
 
         // 新規解放された写真 ＋ 更新された写真 を「NEW」として扱う
         setPhotoUpdateMarkers([...newlyUnlocked, ...newlyUpdated]);
+        markMemoUpdateIfNeeded(nextStep);
         
         // メインタブに戻し、相棒のメッセージもリセットする
         setActivePartnerMessage(null);
@@ -1255,8 +1269,8 @@ export default function GameInterface() {
   const shareText = isAllClear
     ? '心の眼で全ての謎を解き明かしました'
     : '心の眼で謎を解き明かしました';
-  const clearPostUrl = 'https://twitter.com/intent/tweet?text=%E3%80%8CWEB%E8%AC%8E%E8%A7%A3%E3%81%8D%E3%82%B2%E3%83%BC%E3%83%A0%EF%BD%9E%E5%BF%83%E7%9C%BC%EF%BD%9E%E3%80%8D%E3%82%92%E3%82%AF%E3%83%AA%E3%82%A2%E3%81%97%E3%81%9F%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%0A%E5%8F%B3%E7%9B%AE%E3%81%8C%E7%96%BC%E3%81%84%E3%81%9F%E3%81%9C...%0A%0A%E3%83%97%E3%83%AC%E3%82%A4%E3%81%AF%E3%81%93%E3%81%A1%E3%82%89%0Ahttps%3A%2F%2Fmind-eye-riddle.vercel.app%2F%0Ahttps%3A%2F%2Fmind-eye-riddle.vercel.app%2Fshare%2Fclear%0A%23%E5%BF%83%E7%9C%BC%E8%AC%8E%0A&openExternalBrowser=1';
-  const allClearPostUrl = 'https://twitter.com/intent/tweet?text=%E3%80%8CWEB%E8%AC%8E%E8%A7%A3%E3%81%8D%E3%82%B2%E3%83%BC%E3%83%A0%EF%BD%9E%E5%BF%83%E7%9C%BC%EF%BD%9E%E3%80%8D%E3%82%92%E5%AE%8C%E5%85%A8%E3%81%AB%E3%82%AF%E3%83%AA%E3%82%A2%E3%81%97%E3%81%9F%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%0A%E4%BF%BA%E3%81%AE%E5%8F%B3%E7%9B%AE%E3%81%8C%E7%96%BC%E3%81%84%E3%81%9F%E3%81%9C...%0A%0A%E3%83%97%E3%83%AC%E3%82%A4%E3%81%AF%E3%81%93%E3%81%A1%E3%82%89%0Ahttps%3A%2F%2Fmind-eye-riddle.vercel.app%2F%0Ahttps%3A%2F%2Fmind-eye-riddle.vercel.app%2Fshare%2Fallclear%0A%23%E5%BF%83%E7%9C%BC%E8%AC%8E%0A&openExternalBrowser=1';
+  const clearPostUrl = 'https://twitter.com/intent/tweet?text=%E3%80%8CWEB%E8%AC%8E%E8%A7%A3%E3%81%8D%E3%82%B2%E3%83%BC%E3%83%A0%EF%BD%9E%E5%BF%83%E7%9C%BC%EF%BD%9E%E3%80%8D%E3%82%92%E3%82%AF%E3%83%AA%E3%82%A2%E3%81%97%E3%81%9F%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%0A%E5%8F%B3%E7%9B%AE%E3%81%8C%E7%96%BC%E3%81%84%E3%81%9F%E3%81%9C...%0A%0A%E3%83%97%E3%83%AC%E3%82%A4%E3%81%AF%E3%81%93%E3%81%A1%E3%82%89%0Ahttps%3A%2F%2Fmind-eye-riddle.vercel.app%2Fshare%2Fclear%0A%23%E5%BF%83%E7%9C%BC%E8%AC%8E%0A&openExternalBrowser=1';
+  const allClearPostUrl = 'https://twitter.com/intent/tweet?text=%E3%80%8CWEB%E8%AC%8E%E8%A7%A3%E3%81%8D%E3%82%B2%E3%83%BC%E3%83%A0%EF%BD%9E%E5%BF%83%E7%9C%BC%EF%BD%9E%E3%80%8D%E3%82%92%E5%AE%8C%E5%85%A8%E3%81%AB%E3%82%AF%E3%83%AA%E3%82%A2%E3%81%97%E3%81%9F%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%EF%BC%81%0A%E4%BF%BA%E3%81%AE%E5%8F%B3%E7%9B%AE%E3%81%8C%E7%96%BC%E3%81%84%E3%81%9F%E3%81%9C...%0A%0A%E3%83%97%E3%83%AC%E3%82%A4%E3%81%AF%E3%81%93%E3%81%A1%E3%82%89%0Ahttps%3A%2F%2Fmind-eye-riddle.vercel.app%2Fshare%2Fallclear%0A%23%E5%BF%83%E7%9C%BC%E8%AC%8E%0A%0A&openExternalBrowser=1';
 
   const openXPost = () => {
     window.open(isAllClear ? allClearPostUrl : clearPostUrl, '_blank', 'noopener,noreferrer');
@@ -1788,7 +1802,7 @@ export default function GameInterface() {
             {phase === 'puzzle' && isFollowUpPuzzle && currentStep.followUpPuzzle && (
               <div className="border-b border-emerald-500/30 bg-emerald-950/40 px-4 py-3">
                 <p className="text-sm font-bold leading-relaxed text-emerald-100">
-                  緑が追加してみた部分だけど、追加したことで読み方が変わるものは何？
+                  緑が追加してみた部分だけど、追加したことで読み方が変わるものは何？この場所に相応しい名前になったものを答えて
                 </p>
               </div>
             )}
@@ -1871,7 +1885,7 @@ export default function GameInterface() {
                     <div className="rounded-xl border border-cyan-500/30 bg-cyan-950/30 p-4 shadow-[0_0_18px_rgba(6,182,212,0.12)]">
                       <h3 className="text-sm font-bold text-cyan-300">どこが温泉か？</h3>
                       <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                        温泉だと思う提出場所を答えてください。
+                        写真とマップを頼りに、温泉だと思う提出場所を答えてください。
                       </p>
                     </div>
                     <label className="block">
@@ -1898,9 +1912,9 @@ export default function GameInterface() {
                 ) : isLastStepSpiderStage ? (
                   <form onSubmit={handleLastStepSpiderSubmit} className="flex flex-col gap-3">
                     <div className="rounded-xl border border-amber-500/30 bg-amber-950/30 p-3">
-                      <h3 className="text-sm font-bold text-amber-300">提出場所「？」に「蜘蛛」を提出</h3>
+                      <h3 className="text-sm font-bold text-amber-300">温泉である提出場所「？」に「蜘蛛」を提出</h3>
                       <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                        提出場所も選び、そこへお題「蜘蛛」を提出してください。位置に「外」が追加されています。
+                        温泉の提出場所を選び、そこへお題「蜘蛛」を提出してください。位置に「外」が追加されています。
                       </p>
                     </div>
                     <label className="block">
@@ -2597,6 +2611,7 @@ export default function GameInterface() {
         <button 
           onClick={() => {
             setActiveTab('map');
+            setMapTabHasUnreadMemo(false);
             if (tabGuideStep === 'map') {
               setTabGuideStep(null);
             }
@@ -2608,9 +2623,17 @@ export default function GameInterface() {
               次にマップ＆メモを確認しましょう。
             </div>
           )}
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-          </svg>
+          <div className="relative">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            {mapTabHasUnreadMemo && activeTab !== 'map' && (
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border border-slate-900"></span>
+              </span>
+            )}
+          </div>
           <span className="text-[10px] font-medium whitespace-nowrap">マップ＆メモ</span>
         </button>
 

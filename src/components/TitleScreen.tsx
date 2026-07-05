@@ -30,6 +30,9 @@ export default function TitleScreen({ onStart }: TitleScreenProps) {
           <ul className="list-disc space-y-3 pl-5 text-sm leading-relaxed text-slate-200">
             <li>インターネット検索の必要はありませんが、していただいても構いません</li>
             <li>ヒントはほぼ答えまで掲載されているので、順番に見ることを推奨します</li>
+            <li>ブラウザはChromeやSafari最新版を想定しています</li>
+            <li>ブラウザに進捗状況を保存するため、シークレットモードでのプレイは非推奨です</li>
+            <li>配信等にもご自由にお使いください（連絡も不要です）</li>
           </ul>
         </section>
       </main>

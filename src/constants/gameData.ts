@@ -106,7 +106,7 @@ export const GAME_STEPS: StepData[] = [
     },
     partnerEvents: [
       { targetPhoto: 'B', message: '可視化されて分かったが、どうやら僕はこのライオンの銅像に姿を変えられてしまったらしい。そりゃ動けないわけだ。' },
-      { targetPhoto: 'C', message: '動いている時計だ。この穴の大きさに４本ぐらい、最も一般的なサイズじゃないか？' }
+      { targetPhoto: 'C', message: '動いている時計だ。この穴の大きさ、最も一般的なサイズじゃないか？' }
     ],
   },
   {
@@ -287,6 +287,14 @@ export const GAME_STEPS: StepData[] = [
     showBlueAnswerEffect: true,
     unlockedPhotosAtTheme: [],
     searchTarget: { location: 'A', position: '上', item: 'イス' },
+    incorrectSearchMessages: [
+      {
+        location: 'A',
+        position: '上',
+        item: '畳',
+        message: '畳の上に直置きされたものの中で「尻に敷かれるもの」はないようだ',
+      },
+    ],
     unlockedPhotos: ['J'],
     updatedPhotosAtPuzzle: {'I': 'I3' },
     updatedPhotosAtTheme: {'K': 'K2','I': 'I4', 'F': 'F3' },
