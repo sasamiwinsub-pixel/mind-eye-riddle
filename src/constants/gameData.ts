@@ -366,7 +366,7 @@ export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
     label: '1',
     originalSubmittedItem: '電池',
     retryItem: 'コーラ',
-    acceptedRetryItems: ['コカ・コーラ', 'こか・こーら', 'コカコーラ', 'こかこーら', 'こーら', '缶', 'かん', '炭酸飲料', 'たんさんいんりょう', '炭酸', 'たんさん'],
+    acceptedRetryItems: ['コカ・コーラ', 'こか・こーら', 'コカコーラ', 'こかこーら', 'こーら', '缶', 'かん', '炭酸飲料', 'たんさんいんりょう','タンサンインリョウ', '炭酸', 'たんさん', 'タンサン', 'コーラの缶', 'こーらのかん'],
     acceptedTargets: [{ location: 'I', item: '酒瓶', position: '左' }],
   },
   {
@@ -417,7 +417,10 @@ export const LAST_STEP_SUBMISSIONS: LastStepSubmissionData[] = [
     originalSubmittedItem: '缶',
     retryItem: '1円玉',
     acceptedRetryItems: ['1','１','1円玉', '1えんだま', 'いちえんだま', 'イチエンダマ', '1円', '1えん', 'いちえん', 'イチエン', '一円', '一','一円玉'],
-    acceptedTargets: [{ location: 'K', item: '募金箱', position: '中' }],
+    acceptedTargets: [
+      { location: 'K', item: '募金箱', position: '中' },
+      { location: 'K', item: 'カウンター', position: '上' },
+    ],
     excludeFromFinalSubmission: true,
   },
   {

@@ -153,7 +153,7 @@ const CUT_IN_LINES = {
   ],
   bonusStepTwoStart: [
      { speaker: '相棒', text: 'まさか募金箱のお金を移動させるなんて...。立山君はこういう時に頼もしいけど、友人の横山としては倫理観が心配だね' },
-     { speaker: 'ゲームマスター', text: 'ご安心ください。元々空の募金箱に1円を事前に募金をしておきました。窃盗には当たらないのでご安心を' },
+     { speaker: 'ゲームマスター', text: 'ご安心ください。元々空の募金箱へ1円だけ募金しておきました。窃盗には当たらないのでご安心を' },
      { speaker: 'ゲームマスター', text: 'それでは、残りの別解が存在するもの全て、4つのお題を回答してください。' },
      { speaker: 'ゲームマスター', text: 'ただし、今回は転送はせず、”言い当てること”ができたら正解です。テキスト入力のみで回答を受け付けます' },
   ]
@@ -1105,11 +1105,14 @@ export default function GameInterface() {
     const acceptedNames = bonusStepOneTarget
       ? [bonusStepOneTarget.retryItem, ...(bonusStepOneTarget.acceptedRetryItems || [])]
       : ['1円玉'];
+    const matchesAcceptedTarget = bonusStepOneTarget?.acceptedTargets.some(({ location, item, position }) => (
+      searchLocation === location
+      && searchItem === item
+      && searchPosition === position
+    ));
 
     if (
-      searchLocation === 'K'
-      && searchItem === '募金箱'
-      && searchPosition === '中'
+      matchesAcceptedTarget
       && matchesTextAnswer(bonusLastStepOneName, acceptedNames)
     ) {
       setBonusMessage('');
@@ -1147,6 +1150,8 @@ export default function GameInterface() {
       'バスボム',
       'ばすぼむ',
       '入浴剤',
+      'にゅうよくざい',
+      'ニュウヨクザイ',
       'ばすだま',
       'バスだま',
       '入浴球',
@@ -1544,7 +1549,7 @@ export default function GameInterface() {
                   {originalStep.bonusThemeSupplement ?? originalStep.themeSupplement}
                 </div>
               )}
-              <div className="mt-1">ログで見えないが提出したもの：<span className="font-bold text-white">{target.logDisplayItem ?? target.originalSubmittedItem}</span></div>
+              <div className="mt-1">すでに提出したもの：<span className="font-bold text-white">{target.logDisplayItem ?? target.originalSubmittedItem}</span></div>
               <div className="mt-2 text-amber-200">回答は下のテキスト入力のみで判定されます。</div>
               {multiAnswerGroups && (
                 <div className="mt-3 rounded-lg border border-emerald-400/30 bg-emerald-950/25 px-3 py-2">
@@ -2014,7 +2019,7 @@ export default function GameInterface() {
                                 <div className="mt-1">今回あわせて回答する提出です</div>
                               ) : (
                                 <div className="mt-1">
-                                  ログで見えないが提出したもの：<span className="font-bold text-slate-100">{target.logDisplayItem ?? target.originalSubmittedItem}</span>
+                                  すでに提出したもの：<span className="font-bold text-slate-100">{target.logDisplayItem ?? target.originalSubmittedItem}</span>
                                 </div>
                               )}
                             </div>
@@ -2564,7 +2569,7 @@ export default function GameInterface() {
                             <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 font-black text-emerald-200">正解</span>
                           </div>
                           <div className="mt-2">
-                            <span className="block font-bold text-slate-500">ログで見えないが提出したもの</span>
+                            <span className="block font-bold text-slate-500">すでに提出したもの</span>
                             <span className="text-slate-100">{target.logDisplayItem ?? target.originalSubmittedItem}</span>
                           </div>
                           <div className="mt-2">
