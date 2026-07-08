@@ -3,25 +3,37 @@ import Image from 'next/image';
 import Link from 'next/link';
 import RedirectToTop from '../RedirectToTop';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mind-eye-riddle.vercel.app';
 const title = '心の眼で謎を解き明かしました';
 const description = '心の眼で謎を解き明かしました。';
 const imageUrl = '/images/clear.png';
+const image = {
+  url: imageUrl,
+  alt: title,
+  width: 1050,
+  height: 781,
+  type: 'image/png',
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title,
   description,
+  alternates: {
+    canonical: '/share/clear',
+  },
   openGraph: {
     title,
     description,
-    images: [{ url: imageUrl, alt: title }],
+    url: '/share/clear',
+    type: 'website',
+    images: [image],
   },
   twitter: {
     card: 'summary_large_image',
     title,
     description,
-    images: [imageUrl],
+    images: [image],
   },
 };
 

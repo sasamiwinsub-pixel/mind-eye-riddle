@@ -933,6 +933,7 @@ export default function GameInterface() {
     e.preventDefault();
     if (matchesTextAnswer(puzzleInput, activePuzzleAnswers)) {
       setErrorMsg('');
+      setShowCorrectOverlay(true);
       if (currentStep.followUpPuzzle && !isFollowUpPuzzle) {
         setPuzzleInput('');
         if (currentStep.showBlueAnswerEffect) {
@@ -981,6 +982,7 @@ export default function GameInterface() {
     
     if (isCorrectTarget) {
       setErrorMsg('');
+      setShowCorrectOverlay(true);
       setSearchItem('');
       if (currentStep.id === 3) {
         setIsStepOSearchSolved(true);
@@ -1161,6 +1163,7 @@ export default function GameInterface() {
 
     if (allCorrect && isSphereAnswerCorrect) {
       setErrorMsg('');
+      setShowCorrectOverlay(true);
       setIsGameCleared(true);
     } else if (allCorrect) {
       setErrorMsg('球体の再提出は合っています。Fの謎の球体が何だったのかを見直しましょう。');
@@ -1192,6 +1195,7 @@ export default function GameInterface() {
         return;
       }
 
+      setShowCorrectOverlay(true);
       const nextAnswers = [...bonusMultiAnswers, answer];
       setBonusMultiAnswers(nextAnswers);
       updateBonusSubmission('specifiedName', '');
@@ -1228,6 +1232,7 @@ export default function GameInterface() {
       return;
     }
 
+    setShowCorrectOverlay(true);
     if (bonusIndex === BONUS_STEP_SUBMISSIONS.length - 1) {
       setBonusIndex(BONUS_STEP_SUBMISSIONS.length);
       setBonusMessage('おまけの再提出をすべて完了しました！');
