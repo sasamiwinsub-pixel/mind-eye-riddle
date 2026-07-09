@@ -14,6 +14,14 @@ export default function Home() {
 
   useEffect(() => {
     const restoreTimer = window.setTimeout(() => {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('fromShare')) {
+        window.history.replaceState(null, '', '/');
+        setScreen('title');
+        setIsStorageReady(true);
+        return;
+      }
+
       const savedSession = loadSavedSession();
       if (savedSession) setScreen(savedSession.screen);
       setIsStorageReady(true);

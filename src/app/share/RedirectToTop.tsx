@@ -4,7 +4,8 @@ import { useEffect } from 'react';
 
 export default function RedirectToTop() {
   useEffect(() => {
-    window.location.replace('/');
+    const source = window.location.pathname.includes('allclear') ? 'allclear' : 'clear';
+    window.location.replace(`/?fromShare=${source}`);
   }, []);
 
   return null;
