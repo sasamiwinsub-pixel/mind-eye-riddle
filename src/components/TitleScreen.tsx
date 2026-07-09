@@ -6,15 +6,15 @@ interface TitleScreenProps {
 
 export default function TitleScreen({ onStart }: TitleScreenProps) {
   return (
-    <div className="relative mx-auto flex h-[100dvh] max-w-md flex-col overflow-hidden bg-slate-950 px-6 text-slate-100">
-      <div className="pointer-events-none absolute inset-0">
+    <div className="relative mx-auto flex min-h-[100dvh] max-w-md flex-col overflow-y-auto bg-slate-950 px-6 text-slate-100 no-scrollbar">
+      <div className="pointer-events-none fixed inset-0">
         <div className="absolute -left-24 top-16 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl" />
         <div className="absolute -right-20 bottom-20 h-72 w-72 rounded-full bg-indigo-500/15 blur-3xl" />
         <div className="absolute inset-x-0 top-1/3 h-px bg-gradient-to-r from-transparent via-cyan-300/30 to-transparent" />
       </div>
 
       <main className="relative z-10 flex flex-1 flex-col justify-center py-8">
-        <div className="mb-10 text-center">
+        <div className="mb-8 text-center">
           <p className="mb-3 text-sm font-bold tracking-[0.4em] text-cyan-300">謎解きゲーム</p>
           <h1 className="text-5xl font-black tracking-[0.18em] text-white drop-shadow-[0_0_24px_rgba(34,211,238,0.35)]">
             ～心眼～
@@ -37,7 +37,7 @@ export default function TitleScreen({ onStart }: TitleScreenProps) {
         </section>
       </main>
 
-      <div className="relative z-10 pb-8">
+      <div className="relative z-10 pb-[max(2rem,env(safe-area-inset-bottom))]">
         <button
           type="button"
           onClick={onStart}
